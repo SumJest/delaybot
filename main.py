@@ -10,6 +10,7 @@ from vkwave.types.objects import MessagesMessageActionStatus, MessagesMessageAtt
 from utils import messages
 from utils import Users
 from utils import keyboard
+from utils import my_filters
 from utils.Users import ActionStates, QueueMessage
 
 from vkwave.bots import SimpleLongPollBot, SimpleBotEvent
@@ -52,7 +53,17 @@ action_list: List[Users.User] = []
 queue_messages: List[Users.QueueMessage] = []
 
 print("Bot started!")
+
+
 # ----------------------------
+
+def is_int(var):
+    try:
+        int(var)
+        return True
+    except ValueError:
+        return False
+
 
 def get_random_id():
     return random.getrandbits(32)
@@ -88,7 +99,8 @@ async def read_queue():
                                                                      message=dict_msg["message"]["message"],
                                                                      attachment=dict_msg["message"]["attachment"],
                                                                      random_id=dict_msg["message"]["random_id"],
-                                                                     forward_messages=dict_msg["message"]["forward_messages"])))
+                                                                     forward_messages=dict_msg["message"][
+                                                                         "forward_messages"])))
         except:
             continue
 
@@ -133,7 +145,7 @@ async def add_to_chat_event(event: SimpleBotEvent):
                 user.chats_list.append(Users.Chat(event.object.object.message.peer_id))
                 user.action_state = ActionStates.NAME_CHAT
                 action_list.append(user)
-                #Users.update_user(user)
+                # Users.update_user(user)
 
                 await api.messages.send(user_id=user_id, random_id=get_random_id(),
                                         message="Вы только что добавили меня в "
@@ -162,8 +174,8 @@ async def add_to_chat_event(event: SimpleBotEvent):
 #                     Users.update_user(user)
 #                     return None
 
-@bot.message_handler(filters.TextStartswithFilter("удалить"))
-async def text_message(event: SimpleBotEvent):
+@bot.message_handler(filters.TextStartswithFilter("удалить"), ~my_filters.payloadFilter())
+async def del_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
         user = Users.get_user(event.object.object.message.from_id)
@@ -214,16 +226,33 @@ async def chats_message(event: SimpleBotEvent):
 async def chats_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
-        is_founded = False
         for user in action_list:
             if event.object.object.message.from_id == user.user_id:
-                is_founded = True
                 action_list.remove(user)
                 user.action_state = ActionStates.IDLE
                 Users.update_user(user)
-                await event.answer("Хорошо", keyboard=keyboard.main_keyboard.get_keyboard())
-        if not is_founded:
-            await event.answer("Хорошо", keyboard=keyboard.main_keyboard.get_keyboard())
+                break
+        if event.object.object.message.payload is not None:
+            message_id = json.loads(event.object.object.message.payload)['message_id']
+            m = (await api.messages.get_by_id(message_ids=message_id)).response.items[0]
+            attachments = ""
+            for a in m.attachments:
+                attach = json.loads(a.json())
+                type = attach["type"]
+                if type not in can_types:
+                    await event.answer(f"Неподдерживаемый тип приложения \"{type}\". Исключаю его.")
+                    continue
+                if 'owner_id' not in attach[type].keys() or attach[type]['owner_id'] is None:
+                    attach[type]['owner_id'] = attach[type]['from_id']
+                attachments += f"{type}{attach[type]['owner_id']}_{attach[type]['id']}"
+                if 'access_key' in attach[type].keys() and not attach[type]['access_key'] is None:
+                    attachments += f"_{attach[type]['access_key']}"
+                attachments += ","
+
+            await api.messages.edit(peer_id=event.object.object.message.from_id, message=m.text,
+                                    attachment=attachments,
+                                    message_id=message_id)
+        await event.answer("Отменил", keyboard=keyboard.main_keyboard.get_keyboard())
 
 
 @bot.message_handler(filters.TextFilter("запланировать"), filters.MessageFromConversationTypeFilter("from_pm"))
@@ -242,10 +271,22 @@ async def chats_message(event: SimpleBotEvent):
         return "Я вас не нашёл, пожалуйста напишите Начать"
 
 
+@bot.message_handler(filters.TextFilter("редактировать"), filters.MessageFromConversationTypeFilter("from_pm"))
+async def chats_message(event: SimpleBotEvent):
+    log(event)
+    if Users.user_exists(event.object.object.message.from_id):
+        user = Users.get_user(event.object.object.message.from_id)
+        user.action_state = ActionStates.EDIT_CHOOSE_WHAT
+        action_list.append(user)
+        await event.answer("Выберете что вы хотите отредактировать.",
+                           keyboard=keyboard.edit_keyboard.get_keyboard())
+    else:
+        return "Я вас не нашёл, пожалуйста напишите Начать"
+
+
 @bot.message_handler(filters.MessageFromConversationTypeFilter("from_pm"))
 async def text_message(event: SimpleBotEvent):
     log(event)
-    print((await api.messages.get_by_id(message_ids=event.object.object.message.id)).response.items[0])
     for user in action_list:
         if event.object.object.message.from_id == user.user_id:
             if user.action_state == ActionStates.NAME_CHAT:
@@ -253,20 +294,26 @@ async def text_message(event: SimpleBotEvent):
                 user.action_state = ActionStates.IDLE
                 user.chats_list[len(user.chats_list) - 1].name = event.object.object.message.text
                 Users.update_user(user)
-                return f'Я успешно установил название "{event.object.object.message.text}" для последней беседы!'
+                await event.answer(f'Я успешно установил название "{event.object.object.message.text}" '
+                                   f'для беседы!', keyboard=keyboard.main_keyboard.get_keyboard())
             elif user.action_state == ActionStates.DELETE_CHAT:
                 if event.object.object.message.payload is None:
                     return "Что-то пошло не так, нажмите отмена"
                 payload = json.loads(event.object.object.message.payload)
                 chat_id = int(payload["chat_id"])
-                if len(user.chats_list) > chat_id:
+                if len(user.chats_list) > chat_id >= 0:
                     action_list.remove(user)
                     chat = user.chats_list[chat_id]
                     user.chats_list.pop(chat_id)
+                    for qm in queue_messages:
+                        if qm.chat.peer_id == chat.peer_id:
+                            queue_messages.remove(qm)
+                    await update_queue()
                     user.action_state = ActionStates.IDLE
                     Users.update_user(user)
                     await event.answer(
-                        f"Беседа \"{chat.name}\" удалена. Не забудьте исключить бота из этой беседы.",
+                        f"Беседа \"{chat.name}\" и запланированные сообщений в ней удалены. Не забудьте исключить бота "
+                        f"из этой беседы.",
                         keyboard=keyboard.main_keyboard.get_keyboard())
                 else:
                     return "Данная беседа не найдена"
@@ -275,7 +322,7 @@ async def text_message(event: SimpleBotEvent):
                     return "Что-то пошло не так, нажмите отмена"
                 payload = json.loads(event.object.object.message.payload)
                 chat_id = int(payload["chat_id"])
-                if len(user.chats_list) > chat_id:
+                if len(user.chats_list) > chat_id >= 0:
                     action_list.remove(user)
                     user.action_state = ActionStates.QUEUE_UP_CHOOSE_TIME
                     action_list.append(user)
@@ -283,6 +330,8 @@ async def text_message(event: SimpleBotEvent):
                     queue_messages.append(Users.QueueMessage(user.user_id, user.chats_list[chat_id]))
                     await event.answer("Выберете время сообщения по формату dd.mm.yyyy hh:MM",
                                        keyboard=keyboard.back_keyboard.get_keyboard())
+                else:
+                    return "Что-то пошло не так, нажмите отмена"
             elif user.action_state == ActionStates.QUEUE_UP_CHOOSE_TIME:
                 try:
                     qtime = datetime.strptime(event.object.object.message.text, "%d.%m.%Y %H:%M")
@@ -328,7 +377,7 @@ async def text_message(event: SimpleBotEvent):
                         if 'access_key' in attach[type].keys() and not attach[type]['access_key'] is None:
                             attachments += f"_{attach[type]['access_key']}"
                         attachments += ","
-                    #forward = m.id
+                    # forward = m.id
                     # for m in m.fwd_messages:
                     #     forward += str(m.id) + ","
                     if not m.text and not attachments:
@@ -355,6 +404,168 @@ async def text_message(event: SimpleBotEvent):
                     Users.update_user(user)
                     await event.answer("Произошла ошибка. Попробуйте начать всё заново",
                                        keyboard=keyboard.main_keyboard.get_keyboard())
+            elif user.action_state == ActionStates.EDIT_CHOOSE_WHAT:
+                if event.object.object.message.text.lower() == "беседу":
+                    if user.chats_list:
+                        action_list.remove(user)
+                        user.action_state = ActionStates.EDIT_CHOOSE_CHAT
+                        action_list.append(user)
+                        await event.answer("Выберете беседу для редактирования.",
+                                           keyboard=keyboard.create_chats_list_keyboard(user.chats_list).get_keyboard())
+                    else:
+                        await event.answer("У вас нету бесед.")
+                elif event.object.object.message.text.lower() == "сообщение":
+                    output = ""
+                    i = 1
+                    for qm in queue_messages:
+                        if qm.user_id == user.user_id and qm.is_active:
+                            output += f"{i}. В беседу: {qm.chat.name}. Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}.\n"
+                            i += 1
+                    if i == 1:
+                        action_list.remove(user)
+                        user.action_state = ActionStates.IDLE
+                        Users.update_user(user)
+                        await event.answer("У вас ещё нет запланированных сообщений",
+                                           keyboard=keyboard.main_keyboard.get_keyboard())
+                    else:
+                        action_list.remove(user)
+                        user.action_state = ActionStates.EDIT_CHOOSE_MESSAGE
+                        action_list.append(user)
+                        output = ""
+                        i = 1
+                        for qm in queue_messages:
+                            if qm.user_id == user.user_id and qm.is_active:
+                                output += f"{i}. В беседу: {qm.chat.name}. " \
+                                          f"Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}.\n"
+                                i += 1
+                        await event.answer(output)
+                        await event.answer("Напишите номер сообщения для того, чтобы его просмотреть",
+                                           keyboard=keyboard.back_keyboard.get_keyboard())
+                else:
+                    return "Выберете что вы хотите отредактировать сообщение или беседу"
+            elif user.action_state == ActionStates.EDIT_CHOOSE_CHAT:
+                if event.object.object.message.payload is None:
+                    return "Что-то пошло не так, нажмите отмена"
+                payload = json.loads(event.object.object.message.payload)
+                chat_id = int(payload["chat_id"])
+                if len(user.chats_list) > chat_id >= 0:
+                    action_list.remove(user)
+                    user.action_state = ActionStates.EDIT_CHAT_WHAT_TO_DO
+                    action_list.append(user)
+
+                    response = await api.messages.send(peer_id=user.user_id,
+                                                       message=f"Беседа \"{user.chats_list[chat_id].name}\"",
+                                                       random_id=get_random_id())
+                    message_id = response.response
+                    await event.answer("Выберете что хотите сделать с беседой",
+                                       keyboard=keyboard.create_cancel_keyboard(message_id).get_keyboard())
+                    await api.messages.edit(peer_id=user.user_id,
+                                            message_id=message_id,
+                                            message=f"Беседа \"{user.chats_list[chat_id].name}\"",
+                                            keyboard=keyboard.create_chat_keyboard(chat_id, message_id).get_keyboard())
+                else:
+                    return "Данная беседа не найдена"
+            elif user.action_state == ActionStates.EDIT_CHOOSE_MESSAGE:
+                text = event.object.object.message.text
+                if is_int(text):
+                    m_id = int(text)
+                    queue_user_message: List[QueueMessage] = []
+                    for qm in queue_messages:
+                        if qm.user_id == user.user_id and qm.is_active:
+                            queue_user_message.append(qm)
+                    if len(queue_user_message) >= m_id > 0:
+                        m = queue_user_message[m_id - 1]
+                        action_list.remove(user)
+                        user.action_state = ActionStates.EDIT_MESSAGE_WHAT_TO_DO
+                        action_list.append(user)
+                        response = await api.messages.send(peer_id=m.user_id, message=m.message.message,
+                                                           attachment=m.message.attachment,
+                                                           random_id=get_random_id(),
+                                                           forward_messages=m.message.forward_messages)
+                        message_id = response.response
+                        await event.answer("Выберете что хотите сделать с сообщением",
+                                           keyboard=keyboard.create_cancel_keyboard(message_id).get_keyboard())
+                        await api.messages.edit(peer_id=m.user_id, message=m.message.message,
+                                                attachment=m.message.attachment,
+                                                message_id=message_id,
+                                                keyboard=keyboard.create_message_keyboard(m_id,
+                                                                                          message_id).get_keyboard())
+                    else:
+                        return "Сообщение с таким id не найдено"
+                else:
+                    return "Введите id сообщения"
+            elif user.action_state == ActionStates.EDIT_MESSAGE_WHAT_TO_DO:
+                if event.object.object.message.payload is None:
+                    return "Что-то пошло не так, нажмите отмена"
+                payload = json.loads(event.object.object.message.payload)
+                m_id = int(payload["m_id"])
+                message_id = int(payload["message_id"])
+                queue_user_message: List[QueueMessage] = []
+                for qm in queue_messages:
+                    if qm.user_id == user.user_id and qm.is_active:
+                        queue_user_message.append(qm)
+                if m_id < 1 or m_id > len(queue_user_message):
+                    return "Что-то пошло не так, нажмите отмена"
+                text = event.object.object.message.text
+                m = queue_user_message[m_id - 1]
+                if text.lower() == "отправить":
+                    queue_messages.remove(m)
+                    await update_queue()
+                    await api.messages.send(peer_id=m.chat.peer_id, message=m.message.message,
+                                            attachment=m.message.attachment,
+                                            random_id=m.message.random_id,
+                                            forward_messages=m.message.forward_messages)
+                    action_list.remove(user)
+                    user.action_state = ActionStates.IDLE
+                    Users.update_user(user)
+                    await event.answer("Сообщение отправлено", keyboard=keyboard.main_keyboard.get_keyboard())
+                elif text.lower() == "удалить":
+                    queue_messages.remove(m)
+                    await update_queue()
+                    action_list.remove(user)
+                    user.action_state = ActionStates.IDLE
+                    Users.update_user(user)
+                    await event.answer("Сообщение удалено из очереди", keyboard=keyboard.main_keyboard.get_keyboard())
+                else:
+                    return "Выберете что сделать с сообщением Отправить/Удалить"
+                await api.messages.edit(peer_id=m.user_id, message=m.message.message,
+                                        attachment=m.message.attachment,
+                                        message_id=message_id)
+            elif user.action_state == ActionStates.EDIT_CHAT_WHAT_TO_DO:
+                if event.object.object.message.payload is None:
+                    return "Что-то пошло не так, нажмите отмена"
+                payload = json.loads(event.object.object.message.payload)
+                chat_id = int(payload["chat_id"])
+                message_id = int(payload["message_id"])
+                if chat_id < 0 or chat_id >= len(user.chats_list):
+                    return "Что-то пошло не так, нажмите отмена"
+                text = event.object.object.message.text
+                if text.lower() == "название":
+                    print(event.object.object.message)
+                    action_list.remove(user)
+                    user.action_state = ActionStates.NAME_CHAT
+                    chat = user.chats_list.pop(chat_id)
+                    user.chats_list.append(chat)
+                    action_list.append(user)
+                    await event.answer("Введите новое название:", keyboard.back_keyboard.get_keyboard())
+                elif text.lower() == "удалить":
+                    action_list.remove(user)
+                    chat = user.chats_list.pop(chat_id)
+                    for qm in queue_messages:
+                        if qm.chat.peer_id == chat.peer_id:
+                            queue_messages.remove(qm)
+                    await update_queue()
+                    user.action_state = ActionStates.IDLE
+                    Users.update_user(user)
+                    await event.answer(
+                        f"Беседа \"{chat.name}\" и запланированные сообщений в ней удалены. Не забудьте исключить бота "
+                        f"из этой беседы.",
+                        keyboard=keyboard.main_keyboard.get_keyboard())
+                else:
+                    return "Выберете что сделать с беседой Название/Удалить"
+                await api.messages.edit(peer_id=user.user_id,
+                                        message_id=message_id,
+                                        message=f"Беседа \"{user.chats_list[chat_id].name}\"")
 
 
 async def check_message():

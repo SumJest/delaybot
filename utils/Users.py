@@ -29,6 +29,11 @@ class ActionStates(int):
     QUEUE_UP_CHOOSE_CHAT: int = 3
     QUEUE_UP_CHOOSE_TIME: int = 4
     QUEUE_UP_SEND_MESSAGE: int = 5
+    EDIT_CHOOSE_WHAT: int = 6
+    EDIT_CHOOSE_CHAT: int = 7
+    EDIT_CHOOSE_MESSAGE: int = 8
+    EDIT_CHAT_WHAT_TO_DO: int = 9
+    EDIT_MESSAGE_WHAT_TO_DO: int = 10
 
 
 class Message(object):
