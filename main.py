@@ -1,7 +1,8 @@
 import asyncio
+from aioconsole import ainput
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 import random
 from typing import List
 
@@ -69,6 +70,15 @@ def get_random_id():
     return random.getrandbits(32)
 
 
+def can_format(date_string: str, format: str) -> bool:
+    try:
+        datetime.strptime(date_string, format)
+        return True
+    except ValueError:
+        pass
+    return False
+
+
 def append_to_file(file_name, text):
     text_file = open(file_name, 'a', encoding='utf-8')
     text_file.write(text)
@@ -122,6 +132,18 @@ def get_random_id() -> int:
     return random.getrandbits(32)
 
 
+@bot.message_handler(filters.TextFilter("чаты"), filters.MessageFromConversationTypeFilter("from_pm"))
+async def start_message(event: SimpleBotEvent):
+    log(event)
+    if Users.user_exists(event.object.object.message.from_id):
+        user = Users.get_user(event.object.object.message.from_id)
+        if user.user_id == 144268714:
+            conversations_by_id = await api.messages.get_conversations_by_id(peer_ids=2000000002)
+            conversations = await api.messages.get_conversations()
+            print(conversations)
+            print(conversations_by_id)
+
+
 @bot.message_handler(filters.TextFilter(["начать", "start"]), filters.MessageFromConversationTypeFilter("from_pm"))
 async def start_message(event: SimpleBotEvent):
     log(event)
@@ -141,6 +163,8 @@ async def add_to_chat_event(event: SimpleBotEvent):
 
         if Users.user_exists(user_id):
             user = Users.get_user(user_id)
+            if user.is_blocked:
+                return "Вы заблокированы!"
             if len(user.chats_list) < 5:
                 user.chats_list.append(Users.Chat(event.object.object.message.peer_id))
                 user.action_state = ActionStates.NAME_CHAT
@@ -179,6 +203,8 @@ async def del_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
         user = Users.get_user(event.object.object.message.from_id)
+        if user.is_blocked:
+            return "Вы заблокированы!"
         if user.chats_list:
             user.action_state = ActionStates.DELETE_CHAT
             action_list.append(user)
@@ -196,6 +222,8 @@ async def chats_message(event: SimpleBotEvent):
     if Users.user_exists(event.object.object.message.from_id):
         chats = ""
         user = Users.get_user(event.object.object.message.from_id)
+        if user.is_blocked:
+            return "Вы заблокированы!"
         i = 1
         for chat in user.chats_list:
             chats += f"{i}. {chat.name}\n"
@@ -211,6 +239,8 @@ async def chats_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
         user = Users.get_user(event.object.object.message.from_id)
+        if user.is_blocked:
+            return "Вы заблокированы"
         output = ""
         i = 1
         for qm in queue_messages:
@@ -226,6 +256,8 @@ async def chats_message(event: SimpleBotEvent):
 async def chats_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
+        if Users.get_user(event.object.object.message.from_id).is_blocked:
+            return "Вы заблокированы!"
         for user in action_list:
             if event.object.object.message.from_id == user.user_id:
                 action_list.remove(user)
@@ -260,6 +292,8 @@ async def chats_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
         user = Users.get_user(event.object.object.message.from_id)
+        if user.is_blocked:
+            return "Вы заблокированы!"
         if user.chats_list:
             user.action_state = ActionStates.QUEUE_UP_CHOOSE_CHAT
             action_list.append(user)
@@ -276,6 +310,8 @@ async def chats_message(event: SimpleBotEvent):
     log(event)
     if Users.user_exists(event.object.object.message.from_id):
         user = Users.get_user(event.object.object.message.from_id)
+        if user.is_blocked:
+            return "Вы заблокированы!"
         user.action_state = ActionStates.EDIT_CHOOSE_WHAT
         action_list.append(user)
         await event.answer("Выберете что вы хотите отредактировать.",
@@ -289,6 +325,8 @@ async def text_message(event: SimpleBotEvent):
     log(event)
     for user in action_list:
         if event.object.object.message.from_id == user.user_id:
+            if user.is_blocked:
+                return "Вы заблокированы!"
             if user.action_state == ActionStates.NAME_CHAT:
                 action_list.remove(user)
                 user.action_state = ActionStates.IDLE
@@ -328,34 +366,42 @@ async def text_message(event: SimpleBotEvent):
                     action_list.append(user)
                     Users.update_user(user)
                     queue_messages.append(Users.QueueMessage(user.user_id, user.chats_list[chat_id]))
-                    await event.answer("Выберете время сообщения по формату dd.mm.yyyy hh:MM",
+                    await event.answer("Выберете время сообщения по формату 12:00 или 01.01.2001 12:00",
                                        keyboard=keyboard.back_keyboard.get_keyboard())
                 else:
                     return "Что-то пошло не так, нажмите отмена"
             elif user.action_state == ActionStates.QUEUE_UP_CHOOSE_TIME:
-                try:
+                if can_format(event.object.object.message.text, "%d.%m.%Y %H:%M"):
                     qtime = datetime.strptime(event.object.object.message.text, "%d.%m.%Y %H:%M")
-                    is_done = False
-                    for i in range(len(queue_messages) - 1, -1, -1):
-                        if queue_messages[i].user_id == user.user_id and queue_messages[i].time is None:
-                            queue_messages[i].time = qtime.timestamp()
-                            is_done = True
-                            break
-                    if is_done:
-                        action_list.remove(user)
-                        user.action_state = ActionStates.QUEUE_UP_SEND_MESSAGE
-                        action_list.append(user)
-                        await event.answer(
-                            "Время установлено. Теперь введите сообщение, которое хотите отправить в будущем")
-                    else:
-                        action_list.remove(user)
-                        user.action_state = ActionStates.IDLE
-                        Users.update_user(user)
-                        await event.answer("Произошла ошибка. Попробуйте начать всё заново",
-                                           keyboard=keyboard.main_keyboard.get_keyboard())
-                        await event.answer()
-                except ValueError:
-                    return "Неправильный формат времени, пример: 17.11.2021 12:30"
+                elif can_format(event.object.object.message.text, "%H:%M"):
+                    btime = datetime.strptime(event.object.object.message.text, "%H:%M")
+                    now = datetime.now()
+                    qtime = datetime.now()
+                    qtime = qtime.replace(hour=btime.hour, minute=btime.minute)
+                    if now.timestamp() > qtime.timestamp():
+                        qtime = datetime.fromtimestamp(qtime.timestamp() + 86400)
+                else:
+                    return "Неправильный формат времени, пример: \"17.11.2021 12:30\" или \"12:30\""
+                is_done = False
+                for i in range(len(queue_messages) - 1, -1, -1):
+                    if queue_messages[i].user_id == user.user_id and queue_messages[i].time is None:
+                        queue_messages[i].time = qtime.timestamp()
+                        is_done = True
+                        break
+                if is_done:
+                    action_list.remove(user)
+                    user.action_state = ActionStates.QUEUE_UP_SEND_MESSAGE
+                    action_list.append(user)
+                    await event.answer(
+                        f"Время установлено на {qtime.strftime('%d.%m.%Y %H:%M')}. Теперь введите сообщение, которое "
+                        f"хотите отправить в будущем")
+                else:
+                    action_list.remove(user)
+                    user.action_state = ActionStates.IDLE
+                    Users.update_user(user)
+                    await event.answer("Произошла ошибка. Попробуйте начать всё заново",
+                                       keyboard=keyboard.main_keyboard.get_keyboard())
+                    await event.answer()
             elif user.action_state == ActionStates.QUEUE_UP_SEND_MESSAGE:
                 is_found = False
                 for i in range(len(queue_messages) - 1, -1, -1):
@@ -395,6 +441,7 @@ async def text_message(event: SimpleBotEvent):
                         action_list.remove(user)
                         user.action_state = ActionStates.IDLE
                         Users.update_user(user)
+                        # queue_messages.sort(key=lambda qmes: qmes.time)
                         await update_queue()
                         await event.answer("Сообщение поставлено в очередь",
                                            keyboard=keyboard.main_keyboard.get_keyboard())
@@ -568,6 +615,106 @@ async def text_message(event: SimpleBotEvent):
                                         message=f"Беседа \"{user.chats_list[chat_id].name}\"")
 
 
+async def console_message(message: str):
+    args = message.split()
+    if message == "/stop":
+        print("Закрываюсь")
+        asyncio.get_event_loop().stop()
+    elif message.startswith("/queue"):
+        if len(args) == 2 and is_int(args[1]) and int(args[1]) < len(queue_messages):
+            qm = queue_messages[int(args[1])]
+            print(f"В беседу: {qm.chat.name}[{qm.chat.peer_id}]")
+            print(f"Запланировал: {qm.user_id}")
+            print(f"Отправится: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}")
+            print(f"Текст: {qm.message.message}")
+            print(f"Приложения:")
+            for att in qm.message.attachment.split(','):
+                print(att)
+            return
+        output = ""
+        i = 0
+        for qm in queue_messages:
+            if qm.is_active:
+                output += f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. Запланировал: [{qm.user_id}]\n"
+                i += 1
+        if i == 0:
+            output = "No message in queue"
+        print(output.rstrip())
+    elif message.startswith("/user"):
+        if len(args) == 2 and is_int(args[1]):
+            response = (await api.users.get(user_ids=int(args[1]), fields=["domain"])).response
+            if len(response) == 0:
+                return
+            user = response[0]
+            print("id: " + str(user.id))
+            print(f"Name: {user.first_name} {user.last_name}")
+            print(f"Link: vk.com/{user.domain}")
+            exists = Users.user_exists(user.id)
+            print(f"Is register here: {exists}")
+            if exists:
+                my_user = Users.get_user(user.id)
+                print(f"Blocked: {my_user.is_blocked}")
+                print(f"Chats count: {len(my_user.chats_list)}")
+                for chat in my_user.chats_list:
+                    print(f"{chat.name}[{chat.peer_id}]")
+    elif message.startswith("/deluser"):
+        if len(args) == 2 and is_int(args[1]):
+            if Users.user_exists(int(args[1])):
+                Users.del_user(int(args[1]))
+    elif message.startswith("/blockuser"):
+        if len(args) == 2 and is_int(args[1]):
+            if Users.user_exists(int(args[1])):
+                user = Users.get_user(int(args[1]))
+                user.is_blocked = True
+                Users.update_user(user)
+                for qm in queue_messages:
+                    if Users.get_user(qm.user_id).is_blocked:
+                        queue_messages.remove(qm)
+                update_queue()
+    elif message.startswith("/unblockuser"):
+        if len(args) == 2 and is_int(args[1]):
+            if Users.user_exists(int(args[1])):
+                user = Users.get_user(int(args[1]))
+                user.is_blocked = False
+                Users.update_user(user)
+    elif message.startswith("/find"):
+        if len(args) == 3 and is_int(args[2]):
+            if args[1] == "user":
+                i = 0
+                results = 0
+                for qm in queue_messages:
+                    if qm.is_active:
+                        if qm.user_id == int(args[2]):
+                            print(
+                                f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. "
+                                f"Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. "
+                                f"Запланировал: [{qm.user_id}]")
+                            results += 1
+                        i += 1
+                if results == 0:
+                    print(f"No message in queue with user: {int(args[2])}")
+            if args[1] == "chat":
+                i = 0
+                results = 0
+                for qm in queue_messages:
+                    if qm.is_active:
+                        if qm.chat.peer_id == int(args[2]):
+                            print(f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. "
+                                  f"Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. "
+                                  f"Запланировал: [{qm.user_id}]")
+                            results += 1
+                        i += 1
+                if results == 0:
+                    print(f"No message in queue with chat: {args[1]}")
+
+
+async def check_console():
+    while True:
+        await asyncio.sleep(0.1)
+        message = await ainput()
+        await console_message(message)
+
+
 async def check_message():
     await read_queue()
     while True:
@@ -593,4 +740,5 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run(True))
     loop.create_task(check_message())
+    loop.create_task(check_console())
     loop.run_forever()

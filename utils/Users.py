@@ -80,16 +80,18 @@ class User(object):
     user_id: int
     chats_list: List[Chat]
     action_state: int
+    is_blocked: bool
 
-    def __init__(self, user_id: int, chats_list=None, action_state: int = 0):
+    def __init__(self, user_id: int, chats_list=None, action_state: int = 0, is_blocked: bool = False):
         if chats_list is None:
             chats_list = []
         self.user_id = user_id
         self.chats_list = chats_list
         self.action_state = action_state
+        self.is_blocked = is_blocked
 
     def __repr__(self):
-        return f"user_id: {self.user_id}, chat_list: {self.chats_list}, action_state: {self.action_state}"
+        return f"user_id: {self.user_id}, chat_list: {self.chats_list}, action_state: {self.action_state}, is_blocked: {self.is_blocked}"
 
 
 def serialization(user: User) -> str:
@@ -101,7 +103,7 @@ def serialization(user: User) -> str:
     chats_list = []
     for chat in user.chats_list:
         chats_list.append(json.dumps(chat.__dict__))
-    user_dict = {"user_id": user.user_id, "chat_list": chats_list, "action_state": user.action_state}
+    user_dict = {"user_id": user.user_id, "chat_list": chats_list, "action_state": user.action_state, "is_blocked": user.is_blocked}
 
     return json.dumps(user_dict)
 
@@ -117,7 +119,8 @@ def deserialization(user: str) -> User:
     for chat in user_dict["chat_list"]:
         chat_dict = json.loads(chat)
         chat_list.append(Chat(chat_dict["peer_id"], chat_dict["name"]))
-    return User(user_id=user_dict["user_id"], chats_list=chat_list, action_state=user_dict["action_state"])
+    return User(user_id=user_dict["user_id"], chats_list=chat_list, action_state=user_dict["action_state"],
+                is_blocked=user_dict["is_blocked"])
 
 
 def read_users() -> List[User]:
@@ -167,3 +170,8 @@ def update_user(user: User):
     file = open("users/" + str(user.user_id) + ".txt", "w")
     file.write(serialization(user))
     file.close()
+
+
+def del_user(user_id: int):
+    if f"{user_id}.txt" in os.listdir("users"):
+        os.remove(f"users/{user_id}.txt")
