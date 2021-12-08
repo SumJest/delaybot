@@ -710,9 +710,16 @@ async def console_message(message: str):
 
 async def check_console():
     while True:
-        await asyncio.sleep(0.1)
-        message = await ainput()
-        await console_message(message)
+        try:
+            await asyncio.sleep(0.1)
+            message = await ainput()
+            await console_message(message)
+        except BaseException as ex:
+            print("error: ")
+            print(str(ex))
+            print(f"in line: {ex.__traceback__.tb_lineno}")
+
+
 
 
 async def check_message():
