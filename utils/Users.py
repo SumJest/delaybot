@@ -34,6 +34,8 @@ class ActionStates(int):
     EDIT_CHOOSE_MESSAGE: int = 8
     EDIT_CHAT_WHAT_TO_DO: int = 9
     EDIT_MESSAGE_WHAT_TO_DO: int = 10
+    CHOOSE_TIMES: int = 11
+    CHOOSE_DELAY: int = 12
 
 
 class Message(object):

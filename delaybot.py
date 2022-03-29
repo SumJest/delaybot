@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import random
 from typing import List
+import re
 
 from vkwave.types.objects import MessagesMessageActionStatus, MessagesMessageAttachmentType, MessagesMessage
 
@@ -20,21 +21,26 @@ from vkwave.client import AIOHTTPClient
 from vkwave.bots.core.dispatching import filters
 from threading import Thread
 
+from utils.queue import *
+
 if not os.path.exists("users"):
     os.makedirs("users")
     print("\"users\" directory created...")
+if not os.path.exists("queues"):
+    os.makedirs("queues")
+    print("\"queues\" directory created...")
 if not os.path.exists("logs"):
     os.makedirs("logs")
     print("\"logs\" directory created...")
 if not os.path.exists("queue.txt"):
     open('queue.txt', 'w').close()
-    print("'queue.txt' file created...")
+    print("queue.txt' file created...")
 
 # configurating tokens
 if not os.path.exists("config.json"):
     print("You must have config.json file with your tokens...")
     file = open('config.json', 'w')
-    file.write("{\n\tgroup_id: \"YOUR_GROUP_ID\",\n\t'\"vk_token\": \"YOUR_VK_BOT_TOKEN\"}")
+    file.write("{\n\t\"group_id\": YOUR_GROUP_ID,\n\t\"vk_token\": \"YOUR_VK_BOT_TOKEN\"\n}")
     file.close()
     print("Token file created. Please past your tokens. Program will shutdown...")
     exit()
@@ -132,6 +138,17 @@ def get_random_id() -> int:
     return random.getrandbits(32)
 
 
+async def queue_to_str(queue: Queue) -> str:
+    output = f"Очередь: {queue.name}\n"
+
+    for i in range(len(queue.members)):
+        user_data = (await api.users.get(user_ids=queue.members[i])).response[0]
+        output += f"{i + 1}. {user_data.first_name} {user_data.last_name}\n"
+    owner_data = (await api.users.get(user_ids=queue.owner_id)).response[0]
+    output += f"\nСоздатель: {owner_data.first_name} {owner_data.last_name}"
+    return output
+
+
 @bot.message_handler(filters.TextFilter("чаты"), filters.MessageFromConversationTypeFilter("from_pm"))
 async def start_message(event: SimpleBotEvent):
     log(event)
@@ -144,7 +161,7 @@ async def start_message(event: SimpleBotEvent):
             print(conversations_by_id)
 
 
-@bot.message_handler(filters.TextFilter(["начать", "start"]), filters.MessageFromConversationTypeFilter("from_pm"))
+@bot.message_handler(filters.PayloadFilter({'command': 'start'}), filters.MessageFromConversationTypeFilter("from_pm"))
 async def start_message(event: SimpleBotEvent):
     log(event)
     if not Users.user_exists(event.object.object.message.from_id):
@@ -157,6 +174,8 @@ async def start_message(event: SimpleBotEvent):
 
 @bot.message_handler(filters.ChatActionFilter(MessagesMessageActionStatus.CHAT_INVITE_USER))
 async def add_to_chat_event(event: SimpleBotEvent):
+    print(event)
+    print(event.object.object.message.action.member_id)
     if abs(event.object.object.message.action.member_id) == config["group_id"]:
         user_id = event.object.object.message.from_id
         user_data = (await event.api_ctx.users.get(user_ids=event.object.object.message.from_id)).response[0]
@@ -318,6 +337,94 @@ async def chats_message(event: SimpleBotEvent):
                            keyboard=keyboard.edit_keyboard.get_keyboard())
     else:
         return "Я вас не нашёл, пожалуйста напишите Начать"
+
+
+@bot.message_handler(filters.TextContainsFilter("очереди"), filters.MessageFromConversationTypeFilter("chat"))
+async def chat_command_queues(event: SimpleBotEvent):
+    chat_id = event.object.object.message.peer_id
+    if not os.path.exists(f"queues/{chat_id}.txt"):
+        await event.answer("Очередей для этой беседы нет", forward=json.dumps({
+            'peer_id': chat_id,
+            'conversation_message_ids': [event.object.object.message.conversation_message_id],
+            'is_reply': True
+        }))
+        return
+    queues = get_queues_from_file(chat_id)
+    if len(queues) == 0:
+        await event.answer("Очереди не найдены!")
+    else:
+        for queue in queues:
+            await event.answer("очередь", forward=json.dumps({
+                'peer_id': chat_id,
+                'conversation_message_ids': queue.msg_id,
+                'is_reply': True
+            }))
+            await asyncio.sleep(0.1)
+
+
+@bot.message_handler(filters.TextContainsFilter("очередь"), filters.MessageFromConversationTypeFilter("chat"))
+async def chat_command_queues(event: SimpleBotEvent):
+    chat_id = event.object.object.message.peer_id
+    try:
+        message = event.object.object.message.text
+        message = message.replace(re.findall(f"\[club{config['group_id']}\|[\S]+\]", message)[0], '')
+        if message.lstrip(" ").startswith("очередь") and message.replace("очередь", '').replace(' ', ''):
+            message = message.replace("очередь", '').lstrip(" ")
+            name = message
+            queue = Queue(0, name, event.object.object.message.from_id)
+            response = await api.messages.send(peer_ids=[chat_id], message=(await queue_to_str(queue)),
+                                               random_id=get_random_id())
+            # print(response.response[0].conversation_message_id)
+            queue.msg_id = response.response[0].conversation_message_id
+            save_queue(chat_id, queue)
+            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                    message=(await queue_to_str(queue)),
+                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+        else:
+            await event.answer("Введите корректную команду!", forward=json.dumps({
+                'peer_id': chat_id,
+                'conversation_message_ids': event.object.object.message.conversation_message_id
+            }))
+
+    except:
+        return
+
+
+@bot.message_handler(filters.MessageFromConversationTypeFilter("chat"))
+async def chat_text_message(event: SimpleBotEvent):
+    try:
+        message = event.object.object.message.text
+        message = message.replace(re.findall(f"\[club{config['group_id']}\|[\S]+\]", message)[0], '')
+        if Users.user_exists(event.object.object.message.from_id):
+            user = Users.get_user(event.object.object.message.from_id)
+            if user.action_state == ActionStates.IDLE:
+                if user.is_blocked:
+                    return "Вы заблокированы!"
+
+                args = message.split()
+                times = args[len(args) - 2]
+                delay = args[len(args) - 1]
+                user_data = (await event.api_ctx.users.get(user_ids=event.object.object.message.from_id)).response[0]
+                if not str.isnumeric(times) or not str.isnumeric(delay):
+                    return "Я не нашёл у тебя количество повторений и/или задержку"
+                if int(times) > 15:
+                    await event.answer(f"[id{user.user_id}|{user_data.first_name}], к сожалению я ограничен 15 "
+                                       f"повторениями")
+                    return
+                if int(delay) > 30:
+                    await event.answer(f"[id{user.user_id}|{user_data.first_name}], к сожалению я ограничен задержкой "
+                                       f"в 30 секунд")
+                    return
+                await event.answer(f"[id{user.user_id}|{user_data.first_name}], исполняю {times} сообщений, раз "
+                                   f"в {delay} секунд")
+                await asyncio.sleep(1)
+                for i in range(int(times)):
+                    await event.answer(" ".join(args[:len(args) - 2]))
+                    await asyncio.sleep(int(delay))
+        else:
+            return "Я вас не нашёл, пожалуйста напишите мне в личные сообщения Начать"
+    except:
+        return
 
 
 @bot.message_handler(filters.MessageFromConversationTypeFilter("from_pm"))
@@ -615,6 +722,73 @@ async def text_message(event: SimpleBotEvent):
                                         message=f"Беседа \"{user.chats_list[chat_id].name}\"")
 
 
+@bot.handler(my_filters.CallbackFilter(['command', 'name']))
+async def random_event(event: SimpleBotEvent):
+    payload = event.object.object.payload
+    chat_id = event.object.object.peer_id
+    user_id = event.object.object.user_id
+    queue = get_queue_from_file(chat_id, payload['name'])
+    if queue is None:
+        await event.callback_answer(json.dumps({
+            "type": "show_snackbar",
+            "text": "Ошибка: очередь не найдена в базе ;-(!"
+        }))
+        return
+
+    if payload['command'] == "join":
+        if user_id in queue.members:
+            await event.callback_answer(json.dumps({
+                "type": "show_snackbar",
+                "text": "Ты уже состоишь в очереди!"
+            }))
+            return
+        else:
+            queue.add_member(user_id)
+            save_queue(chat_id, queue)
+            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                    message=(await queue_to_str(queue)),
+                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+            return
+    elif payload['command'] == 'leave':
+        if user_id in queue.members:
+            queue.remove_member(user_id)
+            save_queue(chat_id, queue)
+            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                    message=(await queue_to_str(queue)),
+                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+        else:
+            await event.callback_answer(json.dumps({
+                "type": "show_snackbar",
+                "text": "Ты не состоишь в очереди!"
+            }))
+            return
+    elif payload['command'] == 'clear':
+        if user_id == queue.owner_id:
+            queue.members.clear()
+            save_queue(chat_id, queue)
+            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                    message=(await queue_to_str(queue)),
+                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+        else:
+            await event.callback_answer(json.dumps({
+                "type": "show_snackbar",
+                "text": "Только создатель может отчистить очередь!"
+            }))
+            return
+    elif payload['command'] == 'delete':
+        if user_id == queue.owner_id:
+            del_queue(chat_id, queue.name)
+            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                    message=f"Очередь \"{queue.name}\" удалена!",
+                                    keyboard="")
+        else:
+            await event.callback_answer(json.dumps({
+                "type": "show_snackbar",
+                "text": "Только создатель может удалить очередь!"
+            }))
+            return
+
+
 async def console_message(message: str):
     args = message.split()
     if message == "/stop":
@@ -720,8 +894,6 @@ async def check_console():
             print(f"in line: {ex.__traceback__.tb_lineno}")
 
 
-
-
 async def check_message():
     await read_queue()
     while True:
@@ -747,5 +919,5 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run(True))
     loop.create_task(check_message())
-    loop.create_task(check_console())
+    # loop.create_task(check_console())
     loop.run_forever()

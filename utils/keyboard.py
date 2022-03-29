@@ -2,6 +2,8 @@ from vkwave.bots import Keyboard, ButtonColor
 from utils import Users
 from typing import List
 
+from utils.queue import Queue
+
 main_keyboard = Keyboard(one_time=False, inline=False)
 main_keyboard.add_text_button("Беседы", color=ButtonColor.PRIMARY)
 main_keyboard.add_text_button("Очередь", color=ButtonColor.PRIMARY)
@@ -55,3 +57,18 @@ def create_cancel_keyboard(messsage_id: int) -> Keyboard:
     cancel_keyboard = Keyboard(one_time=False, inline=False)
     cancel_keyboard.add_text_button(text="Отмена", color=ButtonColor.NEGATIVE, payload={'message_id': messsage_id})
     return cancel_keyboard
+
+
+def create_queue_keyboard(queue: Queue):
+    queue_keyboard = Keyboard(inline=True)
+    queue_keyboard.add_callback_button(text="Вступить", color=ButtonColor.POSITIVE, payload={'command': 'join',
+                                                                                             'name': queue.name})
+    queue_keyboard.add_callback_button(text="Покинуть", color=ButtonColor.NEGATIVE, payload={'command': 'leave',
+                                                                                             'name': queue.name})
+    queue_keyboard.add_row()
+    queue_keyboard.add_callback_button(text="Очистить", color=ButtonColor.SECONDARY, payload={'command': 'clear',
+                                                                                              'name': queue.name})
+    queue_keyboard.add_callback_button(text="Удалить", color=ButtonColor.SECONDARY, payload={'command': 'delete',
+                                                                                             'name': queue.name})
+
+    return queue_keyboard
