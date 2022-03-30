@@ -7,6 +7,7 @@ import random
 from typing import List
 import re
 
+from vkwave.api.methods._error import APIError
 from vkwave.types.objects import MessagesMessageActionStatus, MessagesMessageAttachmentType, MessagesMessage
 
 from utils import messages
@@ -89,6 +90,16 @@ def append_to_file(file_name, text):
     text_file = open(file_name, 'a', encoding='utf-8')
     text_file.write(text)
     text_file.close()
+
+
+async def edit_message(peer_id, conversation_message_id, message, keyboard):
+    try:
+        await api.messages.edit(peer_id=peer_id, conversation_message_id=conversation_message_id,
+                                message=message,
+                                keyboard=keyboard)
+        return None
+    except APIError as ex:
+        return ex
 
 
 async def update_queue():
@@ -744,18 +755,37 @@ async def random_event(event: SimpleBotEvent):
             return
         else:
             queue.add_member(user_id)
+            result = await edit_message(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                        message=(await queue_to_str(queue)),
+                                        keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+            if result is not None:
+                response = await api.messages.send(peer_id=chat_id, random_id=get_random_id(),
+                                                   message=(await queue_to_str(queue)),
+                                                   keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+                queue.msg_id = response.response[0].conversation_message_id
+                await event.callback_answer(json.dumps({
+                    "type": "show_snackbar",
+                    "text": "Сообщение слишком старое, я отправил новое!"
+                }))
             save_queue(chat_id, queue)
-            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
-                                    message=(await queue_to_str(queue)),
-                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
             return
     elif payload['command'] == 'leave':
         if user_id in queue.members:
             queue.remove_member(user_id)
+
+            result = await edit_message(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                        message=(await queue_to_str(queue)),
+                                        keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+            if result is not None:
+                response = await api.messages.send(peer_id=chat_id, random_id=get_random_id(),
+                                                   message=(await queue_to_str(queue)),
+                                                   keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+                queue.msg_id = response.response[0].conversation_message_id
+                await event.callback_answer(json.dumps({
+                    "type": "show_snackbar",
+                    "text": "Сообщение слишком старое, я отправил новое!"
+                }))
             save_queue(chat_id, queue)
-            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
-                                    message=(await queue_to_str(queue)),
-                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
         else:
             await event.callback_answer(json.dumps({
                 "type": "show_snackbar",
@@ -765,10 +795,20 @@ async def random_event(event: SimpleBotEvent):
     elif payload['command'] == 'clear':
         if user_id == queue.owner_id:
             queue.members.clear()
+
+            result = await edit_message(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                        message=(await queue_to_str(queue)),
+                                        keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+            if result is not None:
+                response = await api.messages.send(peer_id=chat_id, random_id=get_random_id(),
+                                                   message=(await queue_to_str(queue)),
+                                                   keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
+                queue.msg_id = response.response[0].conversation_message_id
+                await event.callback_answer(json.dumps({
+                    "type": "show_snackbar",
+                    "text": "Сообщение слишком старое, я отправил новое!"
+                }))
             save_queue(chat_id, queue)
-            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
-                                    message=(await queue_to_str(queue)),
-                                    keyboard=keyboard.create_queue_keyboard(queue).get_keyboard())
         else:
             await event.callback_answer(json.dumps({
                 "type": "show_snackbar",
@@ -778,9 +818,15 @@ async def random_event(event: SimpleBotEvent):
     elif payload['command'] == 'delete':
         if user_id == queue.owner_id:
             del_queue(chat_id, queue.name)
-            await api.messages.edit(peer_id=chat_id, conversation_message_id=queue.msg_id,
-                                    message=f"Очередь \"{queue.name}\" удалена!",
-                                    keyboard="")
+            result = await edit_message(peer_id=chat_id, conversation_message_id=queue.msg_id,
+                                        message=f"Очередь \"{queue.name}\" удалена!",
+                                        keyboard="")
+            if result is not None:
+                await event.callback_answer(json.dumps({
+                    "type": "show_snackbar",
+                    "text": "Сообщение слишком старое, я не могу его отредактировать, но очередь удалена!"
+                }))
+            save_queue(chat_id, queue)
         else:
             await event.callback_answer(json.dumps({
                 "type": "show_snackbar",
