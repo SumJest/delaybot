@@ -62,13 +62,13 @@ def create_cancel_keyboard(messsage_id: int) -> Keyboard:
 def create_queue_keyboard(queue: Queue):
     queue_keyboard = Keyboard(inline=True)
     queue_keyboard.add_callback_button(text="Вступить", color=ButtonColor.POSITIVE, payload={'command': 'join',
-                                                                                             'name': queue.name})
+                                                                                             'id': queue.id})
     queue_keyboard.add_callback_button(text="Покинуть", color=ButtonColor.NEGATIVE, payload={'command': 'leave',
-                                                                                             'name': queue.name})
+                                                                                             'id': queue.id})
     queue_keyboard.add_row()
     queue_keyboard.add_callback_button(text="Очистить", color=ButtonColor.SECONDARY, payload={'command': 'clear',
-                                                                                              'name': queue.name})
+                                                                                              'id': queue.id})
     queue_keyboard.add_callback_button(text="Удалить", color=ButtonColor.SECONDARY, payload={'command': 'delete',
-                                                                                             'name': queue.name})
-
+                                                                                             'id': queue.id})
     return queue_keyboard
+
