@@ -420,6 +420,8 @@ async def chat_command_queues(event: SimpleBotEvent):
 
 @bot.message_handler(filters.MessageFromConversationTypeFilter("chat"))
 async def chat_text_message(event: SimpleBotEvent):
+    message = event.object.object.message.attachments[0].type
+
     try:
         message = event.object.object.message.text
         message = message.replace(re.findall(f"\[club{config['group_id']}\|[\S]+\]", message)[0], '')
@@ -850,111 +852,6 @@ async def random_event(event: SimpleBotEvent):
                 "text": "Только создатель может удалить очередь!"
             }))
             return
-
-
-async def console_message(message: str):
-    args = message.split()
-    if message == "/stop":
-        print("Закрываюсь")
-        asyncio.get_event_loop().stop()
-    elif message.startswith("/queue"):
-        if len(args) == 2 and is_int(args[1]) and int(args[1]) < len(queue_messages):
-            qm = queue_messages[int(args[1])]
-            print(f"В беседу: {qm.chat.name}[{qm.chat.peer_id}]")
-            print(f"Запланировал: {qm.user_id}")
-            print(f"Отправится: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}")
-            print(f"Текст: {qm.message.message}")
-            print(f"Приложения:")
-            for att in qm.message.attachment.split(','):
-                print(att)
-            return
-        output = ""
-        i = 0
-        for qm in queue_messages:
-            if qm.is_active:
-                output += f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. Запланировал: [{qm.user_id}]\n"
-                i += 1
-        if i == 0:
-            output = "No message in queue"
-        print(output.rstrip())
-    elif message.startswith("/user"):
-        if len(args) == 2 and is_int(args[1]):
-            response = (await api.users.get(user_ids=int(args[1]), fields=["domain"])).response
-            if len(response) == 0:
-                return
-            user = response[0]
-            print("id: " + str(user.id))
-            print(f"Name: {user.first_name} {user.last_name}")
-            print(f"Link: vk.com/{user.domain}")
-            exists = Users.user_exists(user.id)
-            print(f"Is register here: {exists}")
-            if exists:
-                my_user = Users.get_user(user.id)
-                print(f"Blocked: {my_user.is_blocked}")
-                print(f"Chats count: {len(my_user.chats_list)}")
-                for chat in my_user.chats_list:
-                    print(f"{chat.name}[{chat.peer_id}]")
-    elif message.startswith("/deluser"):
-        if len(args) == 2 and is_int(args[1]):
-            if Users.user_exists(int(args[1])):
-                Users.del_user(int(args[1]))
-    elif message.startswith("/blockuser"):
-        if len(args) == 2 and is_int(args[1]):
-            if Users.user_exists(int(args[1])):
-                user = Users.get_user(int(args[1]))
-                user.is_blocked = True
-                Users.update_user(user)
-                for qm in queue_messages:
-                    if Users.get_user(qm.user_id).is_blocked:
-                        queue_messages.remove(qm)
-                update_queue()
-    elif message.startswith("/unblockuser"):
-        if len(args) == 2 and is_int(args[1]):
-            if Users.user_exists(int(args[1])):
-                user = Users.get_user(int(args[1]))
-                user.is_blocked = False
-                Users.update_user(user)
-    elif message.startswith("/find"):
-        if len(args) == 3 and is_int(args[2]):
-            if args[1] == "user":
-                i = 0
-                results = 0
-                for qm in queue_messages:
-                    if qm.is_active:
-                        if qm.user_id == int(args[2]):
-                            print(
-                                f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. "
-                                f"Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. "
-                                f"Запланировал: [{qm.user_id}]")
-                            results += 1
-                        i += 1
-                if results == 0:
-                    print(f"No message in queue with user: {int(args[2])}")
-            if args[1] == "chat":
-                i = 0
-                results = 0
-                for qm in queue_messages:
-                    if qm.is_active:
-                        if qm.chat.peer_id == int(args[2]):
-                            print(f"{i}. В беседу: {qm.chat.name}[{qm.chat.peer_id}]. "
-                                  f"Дата: {datetime.fromtimestamp(qm.time).strftime('%d.%m.%Y %H:%M')}. "
-                                  f"Запланировал: [{qm.user_id}]")
-                            results += 1
-                        i += 1
-                if results == 0:
-                    print(f"No message in queue with chat: {args[1]}")
-
-
-async def check_console():
-    while True:
-        try:
-            await asyncio.sleep(0.1)
-            message = await ainput()
-            await console_message(message)
-        except BaseException as ex:
-            print("error: ")
-            print(str(ex))
-            print(f"in line: {ex.__traceback__.tb_lineno}")
 
 
 async def check_message():
