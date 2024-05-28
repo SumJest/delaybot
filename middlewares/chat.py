@@ -12,7 +12,7 @@ class ChatMiddleware(BaseMiddleware):
                 from_id = event.object.object.message.from_id
                 peer_id = event.object.object.message.peer_id
             case BotEventType.MESSAGE_EVENT:
-                from_id = event.object.object.from_id
+                from_id = event.object.object.user_id
                 peer_id = event.object.object.peer_id
             case _:
                 return MiddlewareResult(True)

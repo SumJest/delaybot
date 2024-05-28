@@ -1,3 +1,5 @@
+import traceback
+
 from .base import BaseModel
 from .chat import Chat
 from .user import User
@@ -6,5 +8,5 @@ from .database import db
 
 try:
     db.create_tables([Chat, User, Queue])
-except:
-    pass
+except Exception as ex:
+    print(traceback.format_exc())

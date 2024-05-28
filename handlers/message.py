@@ -31,3 +31,14 @@ async def start_message_handler(event: SimpleBotEvent,
 async def queue_list_handler(event: SimpleBotEvent,
                              queue_service: QueueService = Provide[ServicesContainer.queue_service]):
     await queue_service.queue_list(event, event['user'], event['chat'])
+
+
+@bots.simple_bot_handler(router,
+                         EventTypeFilter(BotEventType.MESSAGE_NEW),
+                         BotMentionedFilter(settings.VK_GROUP_ID),
+                         TextContainsFilter("очередь"),
+                         MessageFromConversationTypeFilter("from_chat"))
+@inject
+async def queue_list_handler(event: SimpleBotEvent,
+                             queue_service: QueueService = Provide[ServicesContainer.queue_service]):
+    await queue_service.create_queue_event(event, event['user'], event['chat'])

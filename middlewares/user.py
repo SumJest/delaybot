@@ -11,7 +11,7 @@ class UserMiddleware(BaseMiddleware):
             case BotEventType.MESSAGE_NEW:
                 user_id = event.object.object.message.from_id
             case BotEventType.MESSAGE_EVENT:
-                user_id = event.object.object.from_id
+                user_id = event.object.object.user_id
             case _:
                 return MiddlewareResult(True)
         user, created = User.get_or_create(user_id=user_id)
