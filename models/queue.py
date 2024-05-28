@@ -1,5 +1,5 @@
 import peewee
-from peewee import IntegerField, ForeignKeyField
+from peewee import IntegerField, ForeignKeyField, BooleanField, CharField
 
 from .base import BaseModel
 from .chat import Chat
@@ -9,6 +9,7 @@ from .user import User
 
 class Queue(BaseModel):
     id = IntegerField(primary_key=True)
+    name = CharField(max_length=255)
     chat = ForeignKeyField(Chat,
                            on_delete="cascade",
                            related_name="queues")
@@ -16,5 +17,5 @@ class Queue(BaseModel):
     owner = ForeignKeyField(User,
                             on_delete="cascade",
                             related_name="queues")
-    closed = peewee.BooleanField(default=False)
-    queue = QueueField(default=[])
+    closed = BooleanField(default=False)
+    members = QueueField(default=[])
