@@ -15,18 +15,7 @@ bot.add_middleware(UserMiddleware())
 bot.add_middleware(ChatMiddleware())
 bot.dispatcher.add_router(message_router)
 bot.dispatcher.add_router(callback_router)
-#
-# @bot.message_handler()
-# async def simple_handler(event: SimpleBotEvent):
-#     user: User = event['user']
-#     print(user.user_id, user.is_blocked, user.is_admin)
-#     print(event.object.object.message.text)
-#
-#
-# @bot.handler()
-# async def simple_callback_handler(event: SimpleBotEvent):
-#     user: User = event['user']
-#     print(user.user_id, user.is_blocked, user.is_admin)
+
 
 services_container = ServicesContainer(api_context=bot.api_context)
 services_container.wire(['handlers.message',
