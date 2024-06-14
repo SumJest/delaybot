@@ -3,7 +3,7 @@ from vkwave.bots import SimpleBotEvent
 
 from models import User
 from resources import messages
-from utils.keyboard import main_keyboard
+from keyboards.main import get_main_keyboard
 
 
 class UserService:
@@ -14,4 +14,4 @@ class UserService:
     async def greet_user(self, event: SimpleBotEvent, user: User):
         user_data = (await self.api_context.users.get(user_ids=event.object.object.message.from_id)).response[0]
         await event.answer(messages.HELLO_MESSAGE.format(user_data.first_name),
-                           keyboard=main_keyboard.get_keyboard())
+                           keyboard=get_main_keyboard().get_keyboard())

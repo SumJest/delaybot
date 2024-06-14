@@ -1,5 +1,2 @@
-.idea
-.venv
 src/*.env
 src/*.db
-remote
