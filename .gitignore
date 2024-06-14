@@ -1,5 +1,4 @@
-/config.json
-/users/
-/logs/
-/queue.txt
-/queues.db
+.idea
+.venv
+.env
+remote
