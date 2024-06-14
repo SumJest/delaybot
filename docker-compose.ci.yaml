@@ -1,10 +1,10 @@
 version: "3.8"
 services:
   delaybot:
-    image: {$CI_REGISTRY_IMAGE}:{$DOCKER_TAG}
+    image: $CI_REGISTRY_IMAGE:$DOCKER_TAG
     environment:
-      VK_TOKEN: {$VK_TOKEN}
-      VK_GROUP_ID: {$VK_GROUP_ID}
+      VK_TOKEN: $VK_TOKEN
+      VK_GROUP_ID: $VK_GROUP_ID
     volumes:
-      - {$SSH_DIR}/logs:/app/delaybot/logs
-      - {$SSH_DIR}/databases:/app/delaybot/databases
+      - $SSH_DIR/logs:/app/delaybot/logs
+      - $SSH_DIR/databases:/app/delaybot/databases
