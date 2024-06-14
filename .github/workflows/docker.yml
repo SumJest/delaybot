@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-
       - name: Env variable assignment
         run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Assign version
@@ -38,7 +37,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-
       - name: repository name fix and env
         run: |
           echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV  
@@ -63,7 +61,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           source: "./docker-compose.ci.yaml,./.env"
           target: "${{ secrets.SSH_DIR }}"
 
@@ -76,7 +74,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_KEY }}
           envs: DOCKER_USER,DOCKER_PASSWORD
           script: |
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
