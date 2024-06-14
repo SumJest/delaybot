@@ -79,7 +79,7 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           envs: DOCKER_USER,DOCKER_PASSWORD
           script: |
-            echo $APPTOKEN | docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
             cd ${{ secrets.SSH_DIR }}
             docker compose -f ./docker-compose.ci.yaml pull
             docker compose -f ./docker-compose.ci.yaml up -d
