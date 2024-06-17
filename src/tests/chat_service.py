@@ -60,3 +60,4 @@ class ChatServiceTestCase(unittest.IsolatedAsyncioTestCase):
         self.chat_service.fsm.finish.assert_called_once_with(event=event,
                                                              for_what=ForWhat.FOR_USER)
         self.assertEqual(chat.name, "Test chat name")
+        self.assertTrue(False)
