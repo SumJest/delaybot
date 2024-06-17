@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  delaybot:
+    build: ./Dockerfile
+    entrypoint: python -m unittest tests
+    environment:
+      VK_TOKEN: ""
+      VK_GROUP_ID: 0
+
+
