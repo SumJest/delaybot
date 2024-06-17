@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: python -m unittest tests
+    environment:
+      VK_TOKEN: ""
+      VK_GROUP_ID: 0
+
+

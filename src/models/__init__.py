@@ -1,3 +1,4 @@
+import logging
 import traceback
 
 from .base import BaseModel
@@ -9,4 +10,4 @@ from .database import db
 try:
     db.create_tables([Chat, User, Queue])
 except Exception as ex:
-    print(traceback.format_exc())
+    logging.error(ex)
