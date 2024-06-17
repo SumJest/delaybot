@@ -1,14 +1,13 @@
-import logging
 import unittest
 from unittest.mock import MagicMock
 
 from dependency_injector.wiring import inject, Provide
-from vkwave.bots import ForWhat
-
 from middlewares.types.states import AddGroupStates
 from models import User, Chat
 from resources import messages
 from services import ChatService
+from vkwave.bots import ForWhat
+
 from .container import ServicesContainer
 from .database.test import with_test_db
 

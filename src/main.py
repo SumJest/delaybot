@@ -1,13 +1,10 @@
-import logging
-from logging.handlers import RotatingFileHandler
-
 from vkwave.bots import SimpleLongPollBot, FiniteStateMachine
 
 import settings
-from handlers.message import router as message_router
-from handlers.callback import router as callback_router
-from middlewares import UserMiddleware, ChatMiddleware
 from containers import ServicesContainer
+from handlers.callback import router as callback_router
+from handlers.message import router as message_router
+from middlewares import UserMiddleware, ChatMiddleware
 
 bot = SimpleLongPollBot(tokens=[settings.VK_TOKEN], group_id=settings.VK_GROUP_ID)
 bot.add_middleware(UserMiddleware())
