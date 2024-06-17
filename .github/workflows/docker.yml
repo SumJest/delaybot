@@ -33,9 +33,8 @@ jobs:
         run: |
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
           if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
-            echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
+            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
-          echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}"
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -59,7 +58,7 @@ jobs:
           echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV  
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
           if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
-            echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
+            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
 
       - name: Create .env file
