@@ -23,4 +23,4 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Run tests
-      run: docker-compose -f ./docker-compose.tests.yaml run
+      run: docker-compose -f ./docker-compose.tests.yaml run tests
