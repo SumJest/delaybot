@@ -1,7 +1,9 @@
 version: "3.8"
 services:
   tests:
-    build: ./Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
     entrypoint: python -m unittest tests
     environment:
       VK_TOKEN: ""
