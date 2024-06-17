@@ -3,7 +3,13 @@ on:
   push:
     branches: [ "master" ]
   release:
-    types: [published]
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      version:
+        default: latest
+        description: Tag you want to release.
+        required: true
 
 jobs:
   push_to_registry:
@@ -12,13 +18,20 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+      - name: Installing GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.3
+        with:
+          versionSpec: '5.3.x'
+      - name: Use GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.3
       - name: Env variable assignment
         run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Assign version
         run: |
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
-          if [ "${{ github.event.release.tag_name }}" != "" ]; then
-            echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
+            echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
 
       - name: Login to DockerHub
