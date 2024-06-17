@@ -7,10 +7,20 @@ on:
       - completed
 
 jobs:
+  test:
+    name: Run test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run tests
+        run: docker-compose -f ./docker-compose.tests.yaml run tests
   push_to_registry:
+    needs: test
     name: "Build and push"
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion != 'failure' }}
+    if: ${{ github.event.workflow_run.conclusion != 'failure' && github.event_name != 'pull_request'}}
     steps:
       - name: checkout
         uses: actions/checkout@v3
