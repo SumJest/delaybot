@@ -18,13 +18,13 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: Installing GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.3
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v1.1.1
         with:
-          versionSpec: '5.3.x'
+          versionSpec: '5.x'
       - name: Use GitVersion
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.3
+        uses: gittools/actions/gitversion/execute@v1.1.1
       - name: Env variable assignment
         run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Assign version
@@ -33,7 +33,7 @@ jobs:
           if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
             echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
-
+          echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}"
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
@@ -54,8 +54,8 @@ jobs:
         run: |
           echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV  
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
-          if [ "${{ github.event.release.tag_name }}" != "" ]; then
-            echo "DOCKER_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
+            echo "DOCKER_TAG=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
 
       - name: Create .env file
