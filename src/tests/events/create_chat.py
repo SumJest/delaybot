@@ -1,0 +1,2 @@
+class CreateChatEvent(object):
+    bot

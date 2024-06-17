@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from vkwave.bots import SimpleLongPollBot
+from vkwave.bots import SimpleLongPollBot, FiniteStateMachine
 
 import settings
 from handlers.message import router as message_router
@@ -16,7 +16,7 @@ bot.dispatcher.add_router(message_router)
 bot.dispatcher.add_router(callback_router)
 
 
-services_container = ServicesContainer(api_context=bot.api_context)
+services_container = ServicesContainer(api_context=bot.api_context, fsm=FiniteStateMachine())
 services_container.wire(['handlers.message',
                          'handlers.callback'])
 
