@@ -12,10 +12,6 @@ from .container import ServicesContainer
 from .database.test import with_test_db
 
 
-class MockObject(object):
-    pass
-
-
 class ChatServiceTestCase(unittest.IsolatedAsyncioTestCase):
     @inject
     def setUp(self, chat_service: ChatService = Provide[ServicesContainer.chat_service]):
@@ -60,4 +56,3 @@ class ChatServiceTestCase(unittest.IsolatedAsyncioTestCase):
         self.chat_service.fsm.finish.assert_called_once_with(event=event,
                                                              for_what=ForWhat.FOR_USER)
         self.assertEqual(chat.name, "Test chat name")
-        self.assertTrue(False)
