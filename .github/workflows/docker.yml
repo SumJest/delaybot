@@ -46,8 +46,8 @@ jobs:
       - name: Assign version
         run: |
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
-          if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
-            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
+          if [ "${{ steps.gitversion.outputs.FullSemVer }}" != "" ]; then
+            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.FullSemVer }}" >> $GITHUB_ENV
           fi;
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -75,12 +75,14 @@ jobs:
       - name: Use GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1.1.1
+        with:
+          useConfigFile: true
       - name: repository name fix and env
         run: |
           echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV  
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
-          if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
-            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
+          if [ "${{ steps.gitversion.outputs.FullSemVer }}" != "" ]; then
+            echo "DOCKER_TAG=v${{ steps.gitversion.outputs.FullSemVer }}" >> $GITHUB_ENV
           fi;
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "DOCKER_TAG=${{ inputs.version }}" >> $GITHUB_ENV
