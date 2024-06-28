@@ -18,6 +18,7 @@ jobs:
   test:
     name: Run test suite
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -28,7 +29,7 @@ jobs:
     needs: test
     name: "Build and push"
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion != 'failure' && github.event_name != 'pull_request'}}
+    if: ${{ github.event.workflow_run.conclusion != 'failure' && github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'}}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -81,6 +82,9 @@ jobs:
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
           if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
             echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
+          fi;
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "DOCKER_TAG=${{ inputs.version }}" >> $GITHUB_ENV
           fi;
 
       - name: Create .env file
