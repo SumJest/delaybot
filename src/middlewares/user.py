@@ -1,19 +1,21 @@
-from vkwave.bots import BaseMiddleware, BotEvent, MiddlewareResult
-from vkwave.types.bot_events import BotEventType
+from typing import Callable, Dict, Any, Awaitable
+
+from aiogram.types import Message
 
 from models import User
 
+from aiogram import BaseMiddleware
+
 
 class UserMiddleware(BaseMiddleware):
-    async def pre_process_event(self, event: BotEvent) -> MiddlewareResult:
-
-        match event.object.type:
-            case BotEventType.MESSAGE_NEW:
-                user_id = event.object.object.message.from_id
-            case BotEventType.MESSAGE_EVENT:
-                user_id = event.object.object.user_id
-            case _:
-                return MiddlewareResult(True)
-        user, created = User.get_or_create(user_id=user_id)
-        event['user'] = user
-        return MiddlewareResult(not user.is_blocked)
+    async def __call__(
+        self,
+        handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
+        event: Message,
+        data: Dict[str, Any]
+    ) -> Any:
+        user, created = User.get_or_create(user_id=event.from_user.id)
+        if user.is_blocked:
+            return
+        data['user'] = user
+        return await handler(event, data)

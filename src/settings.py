@@ -8,6 +8,8 @@ BASE_DIR = Path(__file__).resolve().parent
 VK_TOKEN = smart_getenv.getenv("VK_TOKEN", type=str)
 VK_GROUP_ID = smart_getenv.getenv("VK_GROUP_ID", type=int)
 
+TELEGRAM_TOKEN = smart_getenv.getenv("TELEGRAM_TOKEN", type=str)
+
 MAX_USER_GROUPS = smart_getenv.getenv("MAX_USER_GROUPS", type=int, default=5)
 LOG_DIR = Path(smart_getenv.getenv("LOG_DIR", type=str, default=BASE_DIR / 'logs'))
 

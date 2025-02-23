@@ -6,18 +6,18 @@ from services import QueueService, UserService, ChatService
 
 
 class ServicesContainer(containers.DeclarativeContainer):
-    api_context = providers.Dependency()
+    bot = providers.Dependency()
     fsm = providers.Dependency()
     queue_service = providers.Factory(
         QueueService,
-        api_context=api_context
+        bot=bot
     )
     user_service = providers.Factory(
         UserService,
-        api_context=api_context
+        bot=bot
     )
     chat_service = providers.Factory(
         ChatService,
-        api_context=api_context,
+        bot=bot,
         fsm=fsm
     )

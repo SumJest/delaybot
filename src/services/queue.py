@@ -3,6 +3,7 @@ import json
 import random
 import re
 
+from aiogram import Bot
 from vkwave.api import APIOptionsRequestContext
 from vkwave.api.methods._error import APIError
 from vkwave.bots import SimpleBotEvent
@@ -16,8 +17,8 @@ from resources import messages
 
 class QueueService:
 
-    def __init__(self, api_context: APIOptionsRequestContext):
-        self.api_context = api_context
+    def __init__(self, bot: Bot):
+        self.bot = bot
 
     def get_random_id(self) -> int:
         return random.getrandbits(32)

@@ -3,7 +3,7 @@ from containers import ServicesContainer
 from unittest.mock import AsyncMock
 
 
-test_services_container = ServicesContainer(api_context=AsyncMock(),
+test_services_container = ServicesContainer(bot=AsyncMock(),
                                             fsm=AsyncMock())
 
 
