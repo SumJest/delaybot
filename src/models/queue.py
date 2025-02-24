@@ -1,4 +1,3 @@
-import peewee
 from peewee import IntegerField, ForeignKeyField, BooleanField, CharField
 
 from .base import BaseModel

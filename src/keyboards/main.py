@@ -1,8 +1,9 @@
 from typing import List
 
 from vkwave.bots import Keyboard, ButtonColor
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
-from keyboards.types import QueueAction
+from keyboards.types.queue_action import QueueActionCallbackFactory, QueueAction
 from models import Chat, Queue
 
 
@@ -68,37 +69,105 @@ def create_cancel_keyboard(messsage_id: int) -> Keyboard:
     cancel_keyboard.add_text_button(text="Отмена", color=ButtonColor.NEGATIVE, payload={'message_id': messsage_id})
     return cancel_keyboard
 
-
 def create_queue_keyboard(queue: Queue):
-    queue_keyboard = Keyboard(inline=True)
-    if not queue.closed:
-        queue_keyboard.add_callback_button(text="Вступить",
-                                           color=ButtonColor.POSITIVE,
-                                           payload={'command': QueueAction.JOIN,
-                                                    'id': queue.id})
-    queue_keyboard.add_callback_button(text="Покинуть",
-                                       color=ButtonColor.NEGATIVE,
-                                       payload={'command': QueueAction.LEAVE,
-                                                'id': queue.id})
-    queue_keyboard.add_row()
-    queue_keyboard.add_callback_button(text="Очистить",
-                                       color=ButtonColor.SECONDARY,
-                                       payload={'command': QueueAction.CLEAR,
-                                                'id': queue.id})
-    queue_keyboard.add_callback_button(text="Удалить",
-                                       color=ButtonColor.SECONDARY,
-                                       payload={'command': QueueAction.DELETE,
-                                                'id': queue.id})
-    queue_keyboard.add_row()
-
+    builder = InlineKeyboardBuilder()
     if queue.closed:
-        queue_keyboard.add_callback_button(text="Открыть",
-                                           color=ButtonColor.SECONDARY,
-                                           payload={'command': QueueAction.OPEN,
-                                                    'id': queue.id})
+        builder.row(
+            InlineKeyboardButton(
+                text="Покинуть",
+                callback_data=QueueActionCallbackFactory(
+                    action=QueueAction.LEAVE,
+                    queue_id=queue.id,
+                )
+            ),
+        )
     else:
-        queue_keyboard.add_callback_button(text="Закрыть",
-                                           color=ButtonColor.SECONDARY,
-                                           payload={'command': QueueAction.CLOSE,
-                                                    'id': queue.id})
-    return queue_keyboard
+        builder.row(
+            InlineKeyboardButton(
+                text="Вступить",
+                callback_data=QueueActionCallbackFactory(
+                    action=QueueAction.JOIN,
+                    queue_id=queue.id,
+                )
+            ),
+            InlineKeyboardButton(
+                text="Покинуть",
+                callback_data=QueueActionCallbackFactory(
+                    action=QueueAction.LEAVE,
+                    queue_id=queue.id,
+                )
+            ),
+        )
+
+        builder.row(
+            InlineKeyboardButton(
+                text="Очистить",
+                callback_data=QueueActionCallbackFactory(
+                    action=QueueAction.CLEAR,
+                    queue_id=queue.id,
+                )
+            ),
+            InlineKeyboardButton(
+                text="Удалить",
+                callback_data=QueueActionCallbackFactory(
+                    action=QueueAction.DELETE,
+                    queue_id=queue.id,
+                )
+            ),
+        )
+        if queue.closed:
+            builder.row(
+                InlineKeyboardButton(
+                    text="Открыть",
+                    callback_data=QueueActionCallbackFactory(
+                        action=QueueAction.OPEN,
+                        queue_id=queue.id,
+                    )
+                )
+            )
+        else:
+            builder.row(
+                InlineKeyboardButton(
+                    text="Закрыть",
+                    callback_data=QueueActionCallbackFactory(
+                        action=QueueAction.CLOSE,
+                        queue_id=queue.id,
+                    )
+                )
+            )
+    return builder.as_markup()
+
+
+# def create_queue_keyboard(queue: Queue):
+#     queue_keyboard = Keyboard(inline=True)
+#     if not queue.closed:
+#         queue_keyboard.add_callback_button(text="Вступить",
+#                                            color=ButtonColor.POSITIVE,
+#                                            payload={'command': QueueAction.JOIN,
+#                                                     'id': queue.id})
+#     queue_keyboard.add_callback_button(text="Покинуть",
+#                                        color=ButtonColor.NEGATIVE,
+#                                        payload={'command': QueueAction.LEAVE,
+#                                                 'id': queue.id})
+#     queue_keyboard.add_row()
+#     queue_keyboard.add_callback_button(text="Очистить",
+#                                        color=ButtonColor.SECONDARY,
+#                                        payload={'command': QueueAction.CLEAR,
+#                                                 'id': queue.id})
+#     queue_keyboard.add_callback_button(text="Удалить",
+#                                        color=ButtonColor.SECONDARY,
+#                                        payload={'command': QueueAction.DELETE,
+#                                                 'id': queue.id})
+#     queue_keyboard.add_row()
+#
+#     if queue.closed:
+#         queue_keyboard.add_callback_button(text="Открыть",
+#                                            color=ButtonColor.SECONDARY,
+#                                            payload={'command': QueueAction.OPEN,
+#                                                     'id': queue.id})
+#     else:
+#         queue_keyboard.add_callback_button(text="Закрыть",
+#                                            color=ButtonColor.SECONDARY,
+#                                            payload={'command': QueueAction.CLOSE,
+#                                                     'id': queue.id})
+#     return queue_keyboard
