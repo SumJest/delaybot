@@ -13,10 +13,9 @@ class ChatMiddleware(BaseMiddleware):
         event: Message,
         data: Dict[str, Any]
     ) -> Any:
-        if event.chat.type not in ('group', 'supergroup'):
-            return
-        chat, created = Chat.get_or_create(
-            peer_id=event.chat.id
-        )
-        data['chat'] = chat
+        if event.chat.type in ('group', 'supergroup'):
+            chat, created = Chat.get_or_create(
+                peer_id=event.chat.id
+            )
+            data['chat'] = chat
         return await handler(event, data)

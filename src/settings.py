@@ -14,11 +14,11 @@ MAX_USER_GROUPS = smart_getenv.getenv("MAX_USER_GROUPS", type=int, default=5)
 LOG_DIR = Path(smart_getenv.getenv("LOG_DIR", type=str, default=BASE_DIR / 'logs'))
 
 
-logging.basicConfig(
-    handlers=[RotatingFileHandler(
-        LOG_DIR / 'delaybot.log',
-        maxBytes=100000,
-        backupCount=10,
-    )],
-    level=logging.INFO
-)
+# logging.basicConfig(
+#     handlers=[RotatingFileHandler(
+#         LOG_DIR / 'delaybot.log',
+#         maxBytes=100000,
+#         backupCount=10,
+#     )],
+#     level=logging.INFO
+# )

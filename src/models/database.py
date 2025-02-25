@@ -1,4 +1,4 @@
 from peewee import SqliteDatabase
 
-db = SqliteDatabase("databases/database.db",
+db = SqliteDatabase("database.db",
                     pragmas={'foreign_keys': 1})

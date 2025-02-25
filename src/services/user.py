@@ -1,5 +1,5 @@
-from vkwave.api import APIOptionsRequestContext
-from vkwave.bots import SimpleBotEvent
+from aiogram import Bot
+from aiogram.types import Message
 
 from models import User
 from resources import messages
@@ -8,10 +8,9 @@ from keyboards.main import get_main_keyboard
 
 class UserService:
 
-    def __init__(self, api_context: APIOptionsRequestContext):
-        self.api_context = api_context
+    def __init__(self, bot: Bot):
+        self.bot = bot
 
-    async def greet_user(self, event: SimpleBotEvent, user: User):
-        user_data = (await self.api_context.users.get(user_ids=event.object.object.message.from_id)).response[0]
-        await event.answer(messages.HELLO_MESSAGE.format(user_data.first_name),
-                           keyboard=get_main_keyboard().get_keyboard())
+    async def greet_user(self, event: Message, user: User):
+        await event.answer(messages.HELLO_MESSAGE.format(event.from_user.first_name),
+                           reply_markup=get_main_keyboard())

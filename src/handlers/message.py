@@ -1,44 +1,67 @@
-from dependency_injector.wiring import Provide, inject
-from vkwave import bots
-from vkwave.bots import (DefaultRouter, PayloadFilter, MessageFromConversationTypeFilter, SimpleBotEvent,
-                         EventTypeFilter, TextContainsFilter)
-from vkwave.types.bot_events import BotEventType
+import logging
 
-import settings
+from aiogram import Router
+from aiogram.filters import Command, CommandObject
+from aiogram.types import Message
+from dependency_injector.wiring import Provide, inject
+
 from containers import ServicesContainer
-from filters import BotMentionedFilter
+from models import User, Chat
 from services import UserService, QueueService
 
-router = DefaultRouter()
+router = Router()
 
-
-@bots.simple_bot_handler(router,
-                         EventTypeFilter(BotEventType.MESSAGE_NEW),
-                         PayloadFilter({'command': 'start'}),
-                         MessageFromConversationTypeFilter("from_pm"))
+@router.message(
+    Command('start')
+)
 @inject
-async def start_message_handler(event: SimpleBotEvent,
+async def start_message_handler(event: Message,
+                                user: User,
                                 user_service: UserService = Provide[ServicesContainer.user_service]):
-    await user_service.greet_user(event, event['user'])
+    await user_service.greet_user(event, user)
 
-
-@bots.simple_bot_handler(router,
-                         EventTypeFilter(BotEventType.MESSAGE_NEW),
-                         BotMentionedFilter(settings.VK_GROUP_ID),
-                         TextContainsFilter("очереди"),
-                         MessageFromConversationTypeFilter("from_chat"))
+@router.message(
+    Command('queue')
+)
 @inject
-async def queue_list_handler(event: SimpleBotEvent,
-                             queue_service: QueueService = Provide[ServicesContainer.queue_service]):
-    await queue_service.queue_list(event, event['user'], event['chat'])
+async def create_queue_handler(event: Message,
+                               command: CommandObject,
+                               user: User,
+                               chat: Chat,
+                               queue_service: QueueService = Provide[ServicesContainer.queue_service]):
 
+    await queue_service.create_queue_event(command.args, user, chat)
 
-@bots.simple_bot_handler(router,
-                         EventTypeFilter(BotEventType.MESSAGE_NEW),
-                         BotMentionedFilter(settings.VK_GROUP_ID),
-                         TextContainsFilter("очередь"),
-                         MessageFromConversationTypeFilter("from_chat"))
+@router.message(
+    Command('queues')
+)
 @inject
-async def queue_list_handler(event: SimpleBotEvent,
-                             queue_service: QueueService = Provide[ServicesContainer.queue_service]):
-    await queue_service.create_queue_event(event, event['user'], event['chat'])
+async def create_queue_handler(event: Message,
+                               command: CommandObject,
+                               user: User,
+                               chat: Chat,
+                               queue_service: QueueService = Provide[ServicesContainer.queue_service]):
+
+    await queue_service.queue_list(event, user, chat)
+
+
+# @bots.simple_bot_handler(router,
+#                          EventTypeFilter(BotEventType.MESSAGE_NEW),
+#                          BotMentionedFilter(settings.VK_GROUP_ID),
+#                          TextContainsFilter("очереди"),
+#                          MessageFromConversationTypeFilter("from_chat"))
+# @inject
+# async def queue_list_handler(event: SimpleBotEvent,
+#                              queue_service: QueueService = Provide[ServicesContainer.queue_service]):
+#     await queue_service.queue_list(event, event['user'], event['chat'])
+#
+#
+# @bots.simple_bot_handler(router,
+#                          EventTypeFilter(BotEventType.MESSAGE_NEW),
+#                          BotMentionedFilter(settings.VK_GROUP_ID),
+#                          TextContainsFilter("очередь"),
+#                          MessageFromConversationTypeFilter("from_chat"))
+# @inject
+# async def queue_list_handler(event: SimpleBotEvent,
+#                              queue_service: QueueService = Provide[ServicesContainer.queue_service]):
+#     await queue_service.create_queue_event(event, event['user'], event['chat'])

@@ -1,7 +1,4 @@
 from dependency_injector import containers, providers
-from vkwave.api import APIOptionsRequestContext
-from vkwave.bots import FiniteStateMachine
-
 from services import QueueService, UserService, ChatService
 
 

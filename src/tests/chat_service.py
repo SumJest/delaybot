@@ -32,7 +32,7 @@ class ChatServiceTestCase(unittest.IsolatedAsyncioTestCase):
         self.chat_service.fsm.set_state.assert_called_once_with(event=event,
                                                                 state=AddGroupStates.NAMING,
                                                                 for_what=ForWhat.FOR_USER)
-        self.chat_service.api_context.messages.send.assert_called_once_with(
+        self.chat_service.bot.messages.send.assert_called_once_with(
             user_id=user.user_id,
             message=messages.ADD_GROUP
         )
