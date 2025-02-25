@@ -2,6 +2,7 @@ import asyncio
 import json
 import random
 import re
+import traceback
 
 from aiogram import Bot
 from aiogram.types import Message, CallbackQuery
@@ -28,17 +29,22 @@ class QueueService:
         return smile_number
 
     def represent_queue(self, queue: Queue):
-        output = f"Очередь: {queue.name}\n"
-
+        output = f"📌 <b>Очередь</b>: <i>{queue.name}</i>\n"
+        status_map = {
+            True: "🔒 <b>Закрыта</b>\n",
+            False: "🟢 <b>Открыта</b>\n",
+        }
+        output += status_map[queue.closed]
         members = queue.members
         users = {user.user_id: user for user in User.select().where(User.user_id.in_(members))}
-
+        output += f"👤 <b>Создатель:</b> {queue.owner}\n\n"
+        output += "👥 <b>Участники:</b>\n"
         for i, user in enumerate(queue.members):
 
-            output += f"{self.num_to_smiles(i + 1)}. {users.get(user, None) or user}\n"
-        output += f"\nСоздатель очереди: {queue.owner}"
-        if queue.closed:
-            output += "\n\n🚫 Закрыта для входа 🚫"
+            output += f"{self.num_to_smiles(i + 1)} {users.get(user, None) or user}\n"
+        if not queue.members:
+            output += f"<i>Нет участников</i>"
+
         return output
 
     async def update_queue_message(self, queue: Queue) -> bool:
@@ -49,14 +55,15 @@ class QueueService:
                     text=self.represent_queue(queue),
                     chat_id=queue.chat.peer_id,
                     message_id=queue.msg_id,
-                    reply_markup=create_queue_keyboard(queue)
+                    reply_markup=create_queue_keyboard(queue),
+                    parse_mode='html'
                 )
             except:
                 pass
 
         if result is None:
             response = await self.bot.send_message(chat_id=queue.chat.peer_id, text=self.represent_queue(queue),
-                                                   reply_markup=create_queue_keyboard(queue))
+                                                   reply_markup=create_queue_keyboard(queue), parse_mode='html')
             queue.msg_id = response.message_id
             queue.save()
             return True
@@ -136,9 +143,12 @@ class QueueService:
                     queue.delete_instance()
                     try:
                         await self.bot.edit_message_text(chat_id=chat.peer_id,
-                                                                  message_id=queue.msg_id,
-                                                                  text=f"Очередь \"{queue.name}\" удалена!",
-                                                                  reply_markup=None)
+                                                         message_id=queue.msg_id,
+                                                         text=f"📌 <b>Очередь:</b> <i>{queue.name}</i>\n" \
+                                                               f"⚠️ <b>Удалена</b>\n" \
+                                                               f"👤 <b>Создатель:</b> {queue.owner}",
+                                                         reply_markup=None,
+                                                         parse_mode='html')
                     except:
                         await callback.answer(
                             text="Сообщение слишком старое, я не могу его отредактировать, но очередь удалена!",

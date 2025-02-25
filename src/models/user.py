@@ -15,6 +15,6 @@ class User(BaseModel):
         if self.first_name or self.last_name:
             return f'{self.first_name or ""} {self.last_name or ""}'.strip()
         elif self.username:
-            return self.username
+            return f'@{self.username}'
         else:
             return f'[{self.user_id}]'
