@@ -2,7 +2,7 @@ from typing import Callable, Dict, Any, Awaitable
 
 from aiogram.types import Message
 
-from models import User
+from database.models import User
 
 from aiogram import BaseMiddleware
 

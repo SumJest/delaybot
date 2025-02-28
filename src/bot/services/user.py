@@ -1,9 +1,9 @@
 from aiogram import Bot
 from aiogram.types import Message
 
-from models import User
+from database.models import User
 from resources import messages
-from keyboards.main import get_main_keyboard
+from bot.keyboards.main import get_main_keyboard
 
 
 class UserService:

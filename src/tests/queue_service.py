@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, AsyncMock
 
 from dependency_injector.wiring import inject, Provide
 
-from models import User, Chat, Queue
-from services import QueueService
+from database.models import User, Chat, Queue
+from bot.services import QueueService
 from .container import ServicesContainer
 from .database.test import with_test_db
 

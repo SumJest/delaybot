@@ -1,10 +1,10 @@
 from aiogram import Router
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery
 from dependency_injector.wiring import inject, Provide
 
 from containers import ServicesContainer
-from keyboards.types.queue_action import QueueActionCallbackFactory
-from services import QueueService
+from bot.keyboards.types.queue_action import QueueActionCallbackFactory
+from bot.services import QueueService
 
 router = Router()
 

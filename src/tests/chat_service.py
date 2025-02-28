@@ -2,10 +2,10 @@ import unittest
 from unittest.mock import MagicMock
 
 from dependency_injector.wiring import inject, Provide
-from middlewares.types.states import AddGroupStates
-from models import User, Chat
+from bot.middlewares.types.states import AddGroupStates
+from database.models import User, Chat
 from resources import messages
-from services import ChatService
+from bot.services import ChatService
 from vkwave.bots import ForWhat
 
 from .container import ServicesContainer

@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, AsyncMock
 
 from dependency_injector.wiring import inject, Provide
 
-from models import User, Chat
-from services import UserService
+from database.models import User, Chat
+from bot.services import UserService
 from .container import ServicesContainer
 from .database.test import with_test_db
 

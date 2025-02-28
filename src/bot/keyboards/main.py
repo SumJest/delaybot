@@ -1,10 +1,8 @@
-from typing import List
-
 from aiogram.types import KeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, KeyboardBuilder, ReplyKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, ReplyKeyboardBuilder
 
-from keyboards.types.queue_action import QueueActionCallbackFactory, QueueAction
-from models import Chat, Queue
+from bot.keyboards.types.queue_action import QueueActionCallbackFactory, QueueAction
+from database.models import Queue
 
 
 def get_main_keyboard():

@@ -1,13 +1,11 @@
-import logging
-
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from dependency_injector.wiring import Provide, inject
 
 from containers import ServicesContainer
-from models import User, Chat
-from services import UserService, QueueService
+from database.models import User, Chat
+from bot.services import UserService, QueueService
 
 router = Router()
 

@@ -1,5 +1,5 @@
 from dependency_injector import containers, providers
-from services import QueueService, UserService, ChatService
+from bot.services import QueueService, UserService, ChatService
 
 
 class ServicesContainer(containers.DeclarativeContainer):

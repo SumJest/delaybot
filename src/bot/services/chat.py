@@ -4,7 +4,7 @@ from aiogram import Bot
 from aiogram.types import Message
 
 import settings
-from models import User, Chat
+from database.models import User, Chat
 from resources import messages
 # from middlewares.types.states import AddGroupStates
 

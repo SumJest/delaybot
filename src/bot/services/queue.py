@@ -1,17 +1,12 @@
 import asyncio
-import json
-import random
-import re
-import traceback
 
 from aiogram import Bot
 from aiogram.types import Message, CallbackQuery
 
-import settings
-from keyboards.main import create_queue_keyboard
-from keyboards.types import QueueAction
-from keyboards.types.queue_action import QueueActionCallbackFactory
-from models import Queue, User, Chat
+from bot.keyboards.main import create_queue_keyboard
+from bot.keyboards.types import QueueAction
+from bot.keyboards.types.queue_action import QueueActionCallbackFactory
+from database.models import Queue, User, Chat
 from resources import messages
 
 

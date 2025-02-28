@@ -3,7 +3,7 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import Message
 
-from models import Chat
+from database.models import Chat
 
 
 class ChatMiddleware(BaseMiddleware):
