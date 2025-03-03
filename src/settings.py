@@ -5,6 +5,8 @@ import smart_getenv
 
 BASE_DIR = Path(__file__).resolve().parent
 
+BASE_URL = smart_getenv.getenv("BASE_URL", type=str).rstrip('/')
+
 VK_TOKEN = smart_getenv.getenv("VK_TOKEN", type=str)
 VK_GROUP_ID = smart_getenv.getenv("VK_GROUP_ID", type=int)
 

@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, AsyncMock
 from dependency_injector.wiring import inject, Provide
 
 from database.models import User, Chat, Queue
-from bot.services import QueueService
+from bot.services import BotQueueService
 from .container import ServicesContainer
 from .database.test import with_test_db
 
 
 class QueueServiceTestCase(unittest.IsolatedAsyncioTestCase):
     @inject
-    def setUp(self, queue_service: QueueService = Provide[ServicesContainer.queue_service]):
+    def setUp(self, queue_service: BotQueueService = Provide[ServicesContainer.queue_service]):
         self.queue_service = queue_service
 
     @with_test_db((Queue, User, Chat))
@@ -31,7 +31,7 @@ class QueueServiceTestCase(unittest.IsolatedAsyncioTestCase):
         user_data_mock_response = MagicMock()
         self.queue_service.api_context.users.get = AsyncMock(return_value=user_data_mock_response)
 
-        result = await self.queue_service.represent_queue(queue)
+        result = await self.queue_service.represent_queue(queue=queue)
         self.assertIsInstance(result, str)
 
     @with_test_db((Queue, User, Chat))

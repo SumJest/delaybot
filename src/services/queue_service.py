@@ -1,113 +1,96 @@
 from typing import Optional
 
-from database.dao import ChatDAO, UserDAO, QueueDAO
-from database.models import Chat, User, Queue
-from database.connection import async_session_maker
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.exceptions.queue import QueueClosedError, AlreadyInQueueError, NotInQueueError
+from database.connection import connection
+from database.exceptions import ObjectNotFoundError
+from database.models import Queue
 
 
 class QueueService:
-    async def create_queue(self, name: str, chat: Chat, owner: User, ):
-        """
-        Creates a new queue with the given name and chat.
-        :param name: Name of the queue.
-        :param chat: Chat instance.
-        :param owner: Owner instance.
-        :return: Queue instance.
-        """
-        async with async_session_maker() as session:
-            queue = Queue(
-                name=name,
-                chat_id=chat.id,
-                owner_id=owner.id,
-            )
-            session.add(queue)
-            await session.commit()
-            await session.refresh(queue)
-            return queue
-
-    async def add_user_to_queue(self, queue: Queue, user: User, position: Optional[int] = None):
+    @classmethod
+    @connection
+    async def add_member(cls, session: AsyncSession, queue_id: int, user_id: int, position: Optional[int] = None):
         """
         Adds a user to the given queue.
-        :param queue: Queue instance.
-        :param user: User instance.
+        :param queue_id: Queue id.
+        :param user_id: User id.
         :param position: Position of the user.
         :return: Queue instance | position
         :raise: AlreadyInQueueError if user is already in
         """
-        async with async_session_maker() as session:
-            await session.refresh(queue)
-            if user.id in queue.members:
-                raise AlreadyInQueueError
-            if position is None:
-                position = len(queue.members)
-            queue.members.insert(position, user.id)
-            session.add(queue)
-            await session.commit()
-            await session.refresh(queue)
-            return queue
+        queue = await Queue.get(session=session, id=queue_id)
+        if queue is None:
+            raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
+        members = queue.members
+        if user_id not in members:
+            if position is not None and 0 <= position < len(members):
+                members.insert(position, user_id)
+            else:
+                members.append(user_id)
+            queue.members = members
+            print(queue.members)
+            await queue.save(session=session)
+        return queue
 
-    async def remove_user_from_queue(self, queue: Queue, user: User):
+    @classmethod
+    @connection
+    async def remove_member(cls, session: AsyncSession, queue_id: int, user_id: int):
         """
         Removes a user from the given queue.
-        :param queue: Queue instance.
-        :param user: User instance.
+        :param queue_id: Queue id.
+        :param user_id: User id.
         :return: None
         :raise: NotInQueueError if user not in queue.
         """
-        async with async_session_maker() as session:
-            await session.refresh(queue)
-            try:
-                queue.members.remove(user.id)
-            except ValueError:
-                raise NotInQueueError
-            session.add(Queue)
-            await session.commit()
-            return queue
+        queue = await Queue.get(session=session, id=queue_id)
+        if queue is None:
+            raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
+        members = queue.members
+        print(user_id, members)
+        if user_id in members:
+            members.remove(user_id)
+            queue.members = members
+            print(queue.members)
+            await queue.save(session=session)
+        return queue
 
-    async def clear_queue(self, queue: Queue):
-        """
-        Clears the given queue.
-        :param queue: Queue instance.
-        :return: None
-        """
-        async with async_session_maker() as session:
-            await session.refresh(queue)
-            queue.members.clear()
-            session.add(queue)
-            await session.commit()
-            return queue
-
-    async def delete_queue(self, queue: Queue):
-        """
-        Deletes the given queue.
-        :param queue: Queue instance.
-        :return: None
-        """
-        async with async_session_maker() as session:
-            session.delete(queue)
-            await session.commit()
-
-    async def move_user(self, queue: Queue, user: User, position: Optional[int] = None):
+    @classmethod
+    @connection
+    async def move_member(cls, session: AsyncSession, queue_id: int, user_id: int, position: int):
         """
         Moves the given user to the given position.
-        :param queue: Queue instance.
-        :param user: User instance.
+        :param queue_id: Queue id.
+        :param user_id: User id.
         :param position: Position of the user.
         :return: None
         :raise: NotInQueueError if user not in queue.
         """
-        async with async_session_maker() as session:
-            await session.refresh(queue)
-            if position is None:
-                position = len(queue.members)
-            try:
-                queue.members.remove(user.id)
-            except ValueError:
-                raise NotInQueueError
-            queue.members.insert(position, user.id)
-            session.add(queue)
-            await session.commit()
-            await session.refresh(queue)
-            return queue
+        queue = await Queue.get(session=session, id=queue_id)
+        if not queue:
+            raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
+        members = queue.members
+        if user_id in members:
+            members.remove(user_id)
+            if 0 <= position < len(members):
+                members.insert(position, user_id)
+            else:
+                members.append(user_id)
+            queue.members = members
+            await queue.save(session=session)
+        return queue
+
+    @classmethod
+    @connection
+    async def clear_queue(cls, session: AsyncSession, queue_id: int) -> Queue:
+        """
+        Clears the given queue.
+        :param queue_id: Queue id.
+        :return: None
+        """
+        queue = await Queue.get(session=session, id=queue_id)
+        if not queue:
+            raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
+        queue.members = []
+        await queue.save(session=session)
+        return queue

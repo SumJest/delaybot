@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: "delaybot"
+      POSTGRES_USER: "delaybot"
+      POSTGRES_PASSWORD: "delaybot"
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres:

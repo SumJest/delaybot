@@ -1,12 +1,12 @@
 from dependency_injector import containers, providers
-from bot.services import QueueService, UserService, ChatService
+from bot.services import BotQueueService, UserService, ChatService
 
 
 class ServicesContainer(containers.DeclarativeContainer):
     bot = providers.Dependency()
     fsm = providers.Dependency()
     queue_service = providers.Factory(
-        QueueService,
+        BotQueueService,
         bot=bot
     )
     user_service = providers.Factory(

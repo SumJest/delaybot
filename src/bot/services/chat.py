@@ -18,13 +18,13 @@ class ChatService:
     async def create_chat(self, event, user: User, chat: Chat):
         if user.chats.count() > settings.MAX_USER_GROUPS:
             await self.bot.send_message(
-                chat_id=user.user_id,
+                chat_id=user.id,
                 text=messages.MAX_GROUP_REACHED
             )
         chat.owner = user
-        chat.save()
+        await chat.save()
         await self.bot.send_message(
-            chat_id=user.user_id,
+            chat_id=user.id,
             text=messages.ADD_GROUP
         )
         # await self.fsm.set_state(event=event, state=AddGroupStates.NAMING, for_what=ForWhat.FOR_USER)
@@ -32,6 +32,6 @@ class ChatService:
     async def name_chat(self, event: Message, user: User, chat: Chat):
         name = event.text
         chat.name = name
-        chat.save()
+        await chat.save()
         # await self.fsm.finish(event=event, for_what=ForWhat.FOR_USER)
 
