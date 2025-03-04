@@ -28,7 +28,7 @@ jobs:
       - name: Run tests
         run: |
           docker build -t test-image -f Dockerfile .
-          docker run --env VK_TOKEN="" --env VK_GROUP_ID=0 test-image python -m unittest tests
+          docker run --env VK_TOKEN="" --env VK_GROUP_ID=0 --entrypoint "python" my-test-image -m unittest tests
   push_to_registry:
     needs: test
     name: "Build and push"
