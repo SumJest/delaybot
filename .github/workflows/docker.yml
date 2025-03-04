@@ -28,7 +28,7 @@ jobs:
       - name: Run tests
         run: |
           docker build . --file Dockerfile --tag ${{ env.CI_REGISTRY_IMAGE }}:test
-          docker run --entrypoint="python -m unittest tests" -e "VK_TOKEN=" -e "VK_GROUP_ID=0" ${{ env.CI_REGISTRY_IMAGE }}:test
+          docker run -e "VK_TOKEN=" -e "VK_GROUP_ID=0" ${{ env.CI_REGISTRY_IMAGE }}:test --entrypoint python -m unittest tests
   push_to_registry:
     needs: test
     name: "Build and push"
