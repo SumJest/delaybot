@@ -27,8 +27,8 @@ jobs:
         run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Run tests
         run: |
-          docker build -t test-image -f Dockerfile .
-          docker run --env VK_TOKEN="" --env VK_GROUP_ID=0 --entrypoint "python" my-test-image -m unittest tests
+          docker build -t delaybot-test -f Dockerfile .
+          docker run --env VK_TOKEN="" --env VK_GROUP_ID=0 --entrypoint "python" delaybot-test -m unittest tests
   push_to_registry:
     needs: test
     name: "Build and push"
