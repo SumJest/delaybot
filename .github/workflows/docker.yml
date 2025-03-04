@@ -21,7 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: Run tests
         run: docker-compose -f ./docker-compose.tests.yaml run tests
   push_to_registry:
