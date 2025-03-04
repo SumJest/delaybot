@@ -24,7 +24,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Run tests
-        run: docker run -it $(docker build -q .) --entrypoint="python -m unittest tests" -e "VK_TOKEN=" -e "VK_GROUP_ID=0"
+        run: |
+          docker build .
+          docker run --entrypoint="python -m unittest tests" -e "VK_TOKEN=" -e "VK_GROUP_ID=0"
   push_to_registry:
     needs: test
     name: "Build and push"
