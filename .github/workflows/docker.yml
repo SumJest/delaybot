@@ -25,8 +25,8 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Run tests
         run: |
-          docker build .
-          docker run --entrypoint="python -m unittest tests" -e "VK_TOKEN=" -e "VK_GROUP_ID=0"
+          docker build . --file Dockerfile --tag ${{ env.CI_REGISTRY_IMAGE }}:${{ env.DOCKER_TAG }}-test
+          docker run --entrypoint="python -m unittest tests" -e "VK_TOKEN=" -e "VK_GROUP_ID=0" ${{ env.CI_REGISTRY_IMAGE }}:${{ env.DOCKER_TAG }}-test
   push_to_registry:
     needs: test
     name: "Build and push"
