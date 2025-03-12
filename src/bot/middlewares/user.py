@@ -1,25 +1,30 @@
 from typing import Callable, Dict, Any, Awaitable
 
-from aiogram.types import Message
+from aiogram import types
+from dependency_injector.wiring import inject, Provide
 
+from containers import ServicesContainer
 from database.models import User
 
 from aiogram import BaseMiddleware
 
+from services.user_service import UserService
+
 
 class UserMiddleware(BaseMiddleware):
+    @inject
+    async def upsert_user(self, user: types.User, user_service: UserService = Provide[ServicesContainer.user_service]) \
+            -> User:
+        return await user_service.upsert(data=user, item_id=user.id)
+
+
     async def __call__(
             self,
-            handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-            event: Message,
+            handler: Callable[[types.Message, Dict[str, Any]], Awaitable[Any]],
+            event: types.Message,
             data: Dict[str, Any]
     ) -> Any:
-        user, created = await User.update_or_create(id=event.from_user.id,
-                                                    defaults={
-                                                        'username': event.from_user.username,
-                                                        'first_name': event.from_user.first_name,
-                                                        'last_name': event.from_user.last_name,
-                                                    })
+        user = await self.upsert_user(event.from_user)
         if user.is_blocked:
             return
         data['user'] = user

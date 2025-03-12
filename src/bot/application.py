@@ -29,4 +29,6 @@ async def setup(webhook_url):
 services_container = ServicesContainer(bot=bot, fsm=object())
 services_container.wire(['bot.handlers.message',
                          'bot.handlers.callback',
-                         'bot.events'])
+                         'bot.events',
+                         'bot.middlewares.chat',
+                         'bot.middlewares.user',])
