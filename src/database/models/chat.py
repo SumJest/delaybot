@@ -9,7 +9,7 @@ class Chat(BaseModel):
 
     # Columns
     id = Column(BigInteger, primary_key=True)  # Primary key (BigInteger)
-    name = Column(Text, default="")  # Text field with default empty string
+    title = Column(Text, default="")  # Text field with default empty string
     owner_id = Column(BigInteger, ForeignKey('user.id', ondelete="SET NULL"), nullable=True, default=None)  # ForeignKey to User
 
     # Relationships

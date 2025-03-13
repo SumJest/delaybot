@@ -35,7 +35,7 @@ def get_main_keyboard():
 # def create_chats_list_keyboard(chats: List[Chat]) -> Keyboard:
 #     chats_list_keyboard = Keyboard(one_time=False, inline=False)
 #     for chat in chats:
-#         chats_list_keyboard.add_text_button(text=chat.name,
+#         chats_list_keyboard.add_text_button(text=chat.title,
 #                                             color=ButtonColor.PRIMARY,
 #                                             payload={'chat_id': chat.peer_id})
 #         chats_list_keyboard.add_row()

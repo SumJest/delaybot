@@ -55,4 +55,4 @@ class ChatServiceTestCase(unittest.IsolatedAsyncioTestCase):
         chat = Chat.get(peer_id=123456)
         self.chat_service.fsm.finish.assert_called_once_with(event=event,
                                                              for_what=ForWhat.FOR_USER)
-        self.assertEqual(chat.name, "Test chat name")
+        self.assertEqual(chat.name, "Test chat title")

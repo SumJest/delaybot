@@ -31,7 +31,7 @@ class ChatService:
 
     async def name_chat(self, event: Message, user: User, chat: Chat):
         name = event.text
-        chat.name = name
+        chat.title = name
         await chat.save()
         # await self.fsm.finish(event=event, for_what=ForWhat.FOR_USER)
 

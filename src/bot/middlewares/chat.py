@@ -12,7 +12,9 @@ class ChatMiddleware(BaseMiddleware):
     @inject
     async def upsert_chat(self, chat: types.Chat,
                           chat_service: ChatService = Provide[ServicesContainer.chat_service]):
-        return await chat_service.upsert(chat, chat.id)
+        chat_model = await chat_service.to_model(chat)
+        print(chat)
+        return await chat_service.upsert(chat_model, chat.id, auto_commit=True)
 
 
     async def __call__(

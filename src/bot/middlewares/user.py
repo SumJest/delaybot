@@ -15,8 +15,8 @@ class UserMiddleware(BaseMiddleware):
     @inject
     async def upsert_user(self, user: types.User, user_service: UserService = Provide[ServicesContainer.user_service]) \
             -> User:
-        return await user_service.upsert(data=user, item_id=user.id)
-
+        user_model = await user_service.to_model(user)
+        return await user_service.upsert(user_model, item_id=user.id, auto_commit=True)
 
     async def __call__(
             self,

@@ -1,20 +1,19 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-import smart_getenv
+
+from environment import Settings
 
 BASE_DIR = Path(__file__).resolve().parent
 
-BASE_URL = smart_getenv.getenv("BASE_URL", type=str).rstrip('/')
+settings = Settings()
 
-VK_TOKEN = smart_getenv.getenv("VK_TOKEN", type=str)
-VK_GROUP_ID = smart_getenv.getenv("VK_GROUP_ID", type=int)
-
-TELEGRAM_TOKEN = smart_getenv.getenv("TELEGRAM_TOKEN", type=str)
-
-MAX_USER_GROUPS = smart_getenv.getenv("MAX_USER_GROUPS", type=int, default=5)
-LOG_DIR = Path(smart_getenv.getenv("LOG_DIR", type=str, default=BASE_DIR / 'logs'))
-
+BASE_URL = settings.base_url.rstrip('/')
+VK_TOKEN = settings.vk.token
+VK_GROUP_ID = settings.vk.group_id
+TELEGRAM_TOKEN = settings.telegram.token
+MAX_USER_GROUPS = settings.max_user_groups
+LOG_DIR = settings.log_dir
 
 # logging.basicConfig(
 #     handlers=[RotatingFileHandler(
