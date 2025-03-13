@@ -17,13 +17,6 @@ database_url = 'postgresql+asyncpg://delaybot:delaybot@localhost:5432/delaybot'
 engine = create_async_engine(url=database_url)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession)
 
-sqlalchemy_config = SQLAlchemyAsyncConfig(
-    connection_string=database_url,
-    session_config=AsyncSessionConfig(expire_on_commit=False),
-    create_all=True,
-    commit_mode="autocommit",
-)
-
 # @event.listens_for(Engine, "connect")
 # def set_sqlite_pragma(dbapi_connection, connection_record):
 #     cursor = dbapi_connection.cursor()

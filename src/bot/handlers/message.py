@@ -29,7 +29,7 @@ async def list_queues_handler(event: Message,
                               user: User,
                               chat: Chat,
                               session=None,
-                              queue_service: BotQueueService = Provide[ServicesContainer.queue_service]):
+                              queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
     print(session)
     await queue_service.queue_list(event=event, user=user, chat=chat)
 
@@ -42,7 +42,7 @@ async def create_queue_handler(event: Message,
                                command: CommandObject,
                                user: User,
                                chat: Chat,
-                               queue_service: BotQueueService = Provide[ServicesContainer.queue_service]):
+                               queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
     await queue_service.create_queue_event(command.args, user, chat)
 
 # @bots.simple_bot_handler(router,
@@ -52,8 +52,8 @@ async def create_queue_handler(event: Message,
 #                          MessageFromConversationTypeFilter("from_chat"))
 # @inject
 # async def queue_list_handler(event: SimpleBotEvent,
-#                              queue_service: BotQueueService = Provide[ServicesContainer.queue_service]):
-#     await queue_service.queue_list(event, event['user'], event['chat'])
+#                              bot_queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
+#     await bot_queue_service.queue_list(event, event['user'], event['chat'])
 #
 #
 # @bots.simple_bot_handler(router,
@@ -63,5 +63,5 @@ async def create_queue_handler(event: Message,
 #                          MessageFromConversationTypeFilter("from_chat"))
 # @inject
 # async def queue_list_handler(event: SimpleBotEvent,
-#                              queue_service: BotQueueService = Provide[ServicesContainer.queue_service]):
-#     await queue_service.create_queue_event(event, event['user'], event['chat'])
+#                              bot_queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
+#     await bot_queue_service.create_queue_event(event, event['user'], event['chat'])

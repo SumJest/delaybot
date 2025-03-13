@@ -2,6 +2,7 @@ from dependency_injector import containers, providers
 from bot.services import BotQueueService
 from containers.context_manager_provider import AsyncContextManager
 from database.connection import Database, database_url, SessionResource
+from services.queue_service import QueueService
 from services.user_service import UserService
 from services.chat_service import ChatService
 
@@ -11,10 +12,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     fsm = providers.Dependency()
     db = providers.Singleton(Database, db_url=database_url)
     session = providers.Resource(SessionResource)
-    queue_service = providers.Factory(
-        BotQueueService,
-        bot=bot
-    )
     user_service = providers.Factory(
         UserService,
         session=session
@@ -22,4 +19,15 @@ class ServicesContainer(containers.DeclarativeContainer):
     chat_service = providers.Factory(
         ChatService,
         session=session
+    )
+    queue_service = providers.Factory(
+        QueueService,
+        session=session
+    )
+    bot_queue_service = providers.Factory(
+        BotQueueService,
+        bot=bot,
+        queue_service=queue_service,
+        user_service=user_service,
+        chat_service=chat_service
     )

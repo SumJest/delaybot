@@ -1,16 +1,16 @@
-from typing import Optional
+from typing import Optional, List, Dict
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
-from database.connection import connection
 from database.exceptions import ObjectNotFoundError
-from database.models import Queue
+from database.models import Queue, User
+from database.repository.queue import QueueRepository
 
 
-class QueueService:
-    @classmethod
-    @connection
-    async def add_member(cls, session: AsyncSession, queue_id: int, user_id: int, position: Optional[int] = None):
+class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
+    repository_type = QueueRepository
+
+    async def add_member(self, queue_id: int, user_id: int, position: Optional[int] = None):
         """
         Adds a user to the given queue.
         :param queue_id: Queue id.
@@ -19,7 +19,7 @@ class QueueService:
         :return: Queue instance | position
         :raise: AlreadyInQueueError if user is already in
         """
-        queue = await Queue.get(session=session, id=queue_id)
+        queue = await self.get(queue_id)
         if queue is None:
             raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
         members = queue.members
@@ -30,12 +30,10 @@ class QueueService:
                 members.append(user_id)
             queue.members = members
             print(queue.members)
-            await queue.save(session=session)
+            await self.update(queue, queue_id, auto_commit=True)
         return queue
 
-    @classmethod
-    @connection
-    async def remove_member(cls, session: AsyncSession, queue_id: int, user_id: int):
+    async def remove_member(self, queue_id: int, user_id: int):
         """
         Removes a user from the given queue.
         :param queue_id: Queue id.
@@ -43,7 +41,7 @@ class QueueService:
         :return: None
         :raise: NotInQueueError if user not in queue.
         """
-        queue = await Queue.get(session=session, id=queue_id)
+        queue = await self.get(queue_id)
         if queue is None:
             raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
         members = queue.members
@@ -52,12 +50,10 @@ class QueueService:
             members.remove(user_id)
             queue.members = members
             print(queue.members)
-            await queue.save(session=session)
+            await self.update(queue, queue_id, auto_commit=True)
         return queue
 
-    @classmethod
-    @connection
-    async def move_member(cls, session: AsyncSession, queue_id: int, user_id: int, position: int):
+    async def move_member(self, queue_id: int, user_id: int, position: int):
         """
         Moves the given user to the given position.
         :param queue_id: Queue id.
@@ -66,7 +62,7 @@ class QueueService:
         :return: None
         :raise: NotInQueueError if user not in queue.
         """
-        queue = await Queue.get(session=session, id=queue_id)
+        queue = await self.get(queue_id)
         if not queue:
             raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
         members = queue.members
@@ -77,20 +73,18 @@ class QueueService:
             else:
                 members.append(user_id)
             queue.members = members
-            await queue.save(session=session)
+            await self.update(queue, queue_id, auto_commit=True)
         return queue
 
-    @classmethod
-    @connection
-    async def clear_queue(cls, session: AsyncSession, queue_id: int) -> Queue:
+    async def clear_queue(self, queue_id: int) -> Queue:
         """
         Clears the given queue.
         :param queue_id: Queue id.
         :return: None
         """
-        queue = await Queue.get(session=session, id=queue_id)
+        queue = await self.get(queue_id)
         if not queue:
             raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
         queue.members = []
-        await queue.save(session=session)
+        await self.update(queue, queue_id, auto_commit=True)
         return queue
