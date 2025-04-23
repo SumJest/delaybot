@@ -1,33 +1,69 @@
-from dependency_injector import containers, providers
+from functools import cached_property
+
+from aiogram import Bot, Dispatcher
+from dependency_injector.wiring import inject, Provide
+
 from bot.services import BotQueueService
-from containers.context_manager_provider import AsyncContextManager
-from database.connection import Database, database_url, SessionResource
+from containers.bot import BotContainer
+from services.chat_service import ChatService
 from services.queue_service import QueueService
 from services.user_service import UserService
-from services.chat_service import ChatService
 
 
-class ServicesContainer(containers.DeclarativeContainer):
-    bot = providers.Dependency()
-    fsm = providers.Dependency()
-    db = providers.Singleton(Database, db_url=database_url)
-    session = providers.Resource(SessionResource)
-    user_service = providers.Factory(
-        UserService,
-        session=session
-    )
-    chat_service = providers.Factory(
-        ChatService,
-        session=session
-    )
-    queue_service = providers.Factory(
-        QueueService,
-        session=session
-    )
-    bot_queue_service = providers.Factory(
-        BotQueueService,
-        bot=bot,
-        queue_service=queue_service,
-        user_service=user_service,
-        chat_service=chat_service
-    )
+# class ServicesContainer(containers.DeclarativeContainer):
+#     bot = providers.Dependency()
+#     fsm = providers.Dependency()
+#     db = providers.Singleton(Database, db_url=database_url)
+#     session = providers.Resource(SessionResource)
+#     user_service = providers.Factory(
+#         UserService,
+#         session=session
+#     )
+#     chat_service = providers.Factory(
+#         ChatService,
+#         session=session
+#     )
+#     queue_service = providers.Factory(
+#         QueueService,
+#         session=session
+#     )
+#     bot_queue_service = providers.Factory(
+#         BotQueueService,
+#         bot=bot,
+#         queue_service=queue_service,
+#         user_service=user_service,
+#         chat_service=chat_service
+#     )
+
+
+class ServicesContainer:
+
+    @inject
+    def __initialize_bot(self,
+                         bot: Bot = Provide[BotContainer.bot],
+                         dp: Dispatcher = Provide[BotContainer.dispatcher]):
+        self.bot = bot
+        self.dp = dp
+
+    def __init__(self, session):
+        self.session = session
+        self.__initialize_bot()
+
+    @cached_property
+    def user_service(self):
+        return UserService(self.session)
+
+    @cached_property
+    def chat_service(self):
+        return ChatService(self.session)
+
+    @cached_property
+    def queue_service(self):
+        return QueueService(self.session)
+
+    @cached_property
+    def bot_queue_service(self):
+        return BotQueueService(bot=self.bot,
+                               queue_service=self.queue_service,
+                               user_service=self.user_service,
+                               chat_service=self.chat_service)

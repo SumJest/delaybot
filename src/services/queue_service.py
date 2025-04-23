@@ -1,9 +1,9 @@
-from typing import Optional, List, Dict
+from typing import Optional
 
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 
 from database.exceptions import ObjectNotFoundError
-from database.models import Queue, User
+from database.models import Queue
 from database.repository.queue import QueueRepository
 
 
@@ -25,12 +25,10 @@ class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
         members = queue.members
         if user_id not in members:
             if position is not None and 0 <= position < len(members):
-                members.insert(position, user_id)
+                queue.members.insert(position, user_id)
             else:
-                members.append(user_id)
-            queue.members = members
-            print(queue.members)
-            await self.update(queue, queue_id, auto_commit=True)
+                queue.members.append(user_id)
+            queue = await self.update(queue, queue_id, auto_commit=True, auto_refresh=True)
         return queue
 
     async def remove_member(self, queue_id: int, user_id: int):
@@ -45,11 +43,9 @@ class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
         if queue is None:
             raise ObjectNotFoundError(Queue, {'queue_id': queue_id})
         members = queue.members
-        print(user_id, members)
         if user_id in members:
             members.remove(user_id)
             queue.members = members
-            print(queue.members)
             await self.update(queue, queue_id, auto_commit=True)
         return queue
 

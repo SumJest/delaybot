@@ -1,7 +1,13 @@
+from advanced_alchemy.extensions.fastapi import AdvancedAlchemy
 from fastapi import FastAPI
 
-from api.routers import telegram_router
+from database.connection import async_config
 
 app = FastAPI()
 
-app.include_router(telegram_router, prefix='/telegram')
+alchemy = AdvancedAlchemy(
+    config=async_config,
+    app=app
+)
+
+

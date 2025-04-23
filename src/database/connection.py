@@ -1,8 +1,9 @@
+import json
 import logging
 from contextlib import AbstractContextManager, asynccontextmanager
 from typing import Optional, Callable
 
-from advanced_alchemy.config import AsyncSessionConfig
+from advanced_alchemy.config import AsyncSessionConfig, EngineConfig
 from advanced_alchemy.extensions.fastapi import SQLAlchemyAsyncConfig
 from dependency_injector.resources import T
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
@@ -10,9 +11,15 @@ from dependency_injector import resources
 
 logger = logging.getLogger(__name__)
 
-# TODO: Use environment variables, PRAGMA only for sqlite
-
 database_url = 'postgresql+asyncpg://delaybot:delaybot@localhost:5432/delaybot'
+
+async_config = SQLAlchemyAsyncConfig(
+    connection_string=database_url,
+    session_config=AsyncSessionConfig(expire_on_commit=False),
+    create_all=True,
+    commit_mode="autocommit",
+    engine_config=EngineConfig(json_serializer=json.dumps)
+)
 
 engine = create_async_engine(url=database_url)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession)

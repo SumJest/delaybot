@@ -1,19 +1,19 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
+from dependency_injector.wiring import inject, Provide
 
 import settings
 from containers import ServicesContainer
 from bot.handlers import callback_router
 from bot.handlers import message_router
 from bot.middlewares import UserMiddleware, ChatMiddleware
+from containers.bot import BotContainer
 
-bot = Bot(token=settings.TELEGRAM_TOKEN)
-
-dp = Dispatcher()
-
-
-async def setup(webhook_url):
+@inject
+async def setup(webhook_url,
+                bot: Bot = Provide[BotContainer.bot],
+                dp: Dispatcher = Provide[BotContainer.dispatcher]):
     dp.message.middleware(UserMiddleware())
     dp.message.middleware(ChatMiddleware())
     dp.callback_query.middleware(UserMiddleware())
@@ -25,10 +25,3 @@ async def setup(webhook_url):
         drop_pending_updates=True
     )
 
-
-services_container = ServicesContainer(bot=bot, fsm=object())
-services_container.wire(['bot.handlers.message',
-                         'bot.handlers.callback',
-                         'bot.events',
-                         'bot.middlewares.chat',
-                         'bot.middlewares.user',])

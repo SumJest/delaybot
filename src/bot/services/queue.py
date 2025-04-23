@@ -1,7 +1,9 @@
 import asyncio
+import logging
 import traceback
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
 
 from bot.keyboards.main import create_queue_keyboard
@@ -62,8 +64,11 @@ class BotQueueService:
                     parse_mode='html'
                 )
 
-            except Exception as ex:
-                print(traceback.format_exc())
+            except TelegramBadRequest as ex:
+                if ex.message == ("Bad Request: message is not modified: specified new message content and reply "
+                                  "markup are exactly the same as a current content and reply markup of the message"):
+                    return True
+                logging.info(traceback.format_exc())
 
         if result is None:
             response = await self.bot.send_message(chat_id=chat.id, text=await self.represent_queue(queue=queue),
@@ -102,7 +107,7 @@ class BotQueueService:
             await self.bot.send_message(
                 text=messages.ENTER_QUEUE_NAME,
                 chat_id=chat.id)
-        print(user.id)
+            return
         queue = await self.queue_service.create(
             Queue(name=queue_name, owner_id=user.id, chat_id=chat.id),
             auto_commit=True
@@ -113,51 +118,51 @@ class BotQueueService:
                                  callback: CallbackQuery,
                                  callback_data: QueueActionCallbackFactory,
                                  user: User):
-        print(callback_data)
         queue: Queue = await self.queue_service.get(callback_data.queue_id)
         if queue is None:
             await callback.answer(text="Ошибка: очередь не найдена в базе ;-(!", show_alert=True)
             return
         match callback_data.action:
             case QueueAction.JOIN:
-                # if user.id in queue.members:
-                #     await callback.answer(text="Ты уже состоишь в очереди!", show_alert=True)
-                # else:
-                #     BotQueueService
-                await QueueService.add_member(
+                if user.id in queue.members:
+                    await callback.answer(text="Ты уже состоишь в очереди", show_alert=True)
+                    return
+                queue = await self.queue_service.add_member(
                     queue_id=queue.id,
                     user_id=user.id,
                 )
+                await self.update_queue_message(queue)
             case QueueAction.LEAVE:
-                # if user.id in queue.members:
-                #     queue.members.remove(user.id)
-                #     await queue.save()
-                # else:
-                #     await callback.answer(text="Ты не состоишь в очереди!", show_alert=True)
-                await QueueService.remove_member(
+                if user.id not in queue.members:
+                    await callback.answer(text="Тебя нет в очереди", show_alert=True)
+                    return
+                queue = await self.queue_service.remove_member(
                     queue_id=queue.id,
                     user_id=user.id,
                 )
+                await self.update_queue_message(queue)
             case QueueAction.CLEAR:
                 if queue.owner_id == user.id or user.is_admin:
-                    # if not queue.members:
-                    #     await callback.answer(text="Очередь пуста!", show_alert=True)
-                    #     return
-                    # queue.members = []
-                    # await queue.save()
-                    await QueueService.clear_queue(
+                    if not len(queue.members):
+                        await callback.answer(text="Очередь пуста", show_alert=True)
+                        return
+                    queue = await self.queue_service.clear_queue(
                         queue_id=queue.id,
                     )
+                    await self.update_queue_message(queue)
                 else:
                     await callback.answer(text="Только создатель может отчистить очередь!", show_alert=True)
             case QueueAction.DELETE:
                 if queue.owner_id == user.id or user.is_admin:
                     await self.queue_service.delete(queue.id, auto_commit=True)
+                    await self.mark_deleted(queue)
                 else:
                     await callback.answer(text="Только создатель может удалить очередь!", show_alert=True)
             case QueueAction.CLOSE | QueueAction.OPEN:
                 if queue.owner_id == user.id or user.is_admin:
                     queue.closed = True if callback_data.action == QueueAction.CLOSE else False
-                    await self.queue_service.update(queue)
+                    queue = await self.queue_service.update(queue)
+                    await self.update_queue_message(queue)
                 else:
                     await callback.answer(text="Только создатель может закрыть/открыть очередь!", show_alert=True)
+        await callback.answer()

@@ -13,37 +13,32 @@ router = Router()
 @router.message(
     Command('start')
 )
-@inject
 async def start_message_handler(event: Message,
                                 user: User,
-                                user_service: UserService = Provide[ServicesContainer.user_service]):
-    await user_service.greet_user(event, user)
+                                services_container: ServicesContainer):
+    return "Hi"
 
 
 @router.message(
     Command('queues')
 )
-@inject
 async def list_queues_handler(event: Message,
                               command: CommandObject,
                               user: User,
                               chat: Chat,
-                              session=None,
-                              queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
-    print(session)
-    await queue_service.queue_list(event=event, user=user, chat=chat)
+                              services_container: ServicesContainer):
+    await services_container.bot_queue_service.queue_list(event=event, user=user, chat=chat)
 
 
 @router.message(
     Command('queue')
 )
-@inject
 async def create_queue_handler(event: Message,
                                command: CommandObject,
                                user: User,
                                chat: Chat,
-                               queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
-    await queue_service.create_queue_event(command.args, user, chat)
+                               services_container: ServicesContainer):
+    await services_container.bot_queue_service.create_queue_event(command.args, user, chat)
 
 # @bots.simple_bot_handler(router,
 #                          EventTypeFilter(BotEventType.MESSAGE_NEW),

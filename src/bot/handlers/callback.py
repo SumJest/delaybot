@@ -10,9 +10,8 @@ router = Router()
 
 
 @router.callback_query(QueueActionCallbackFactory.filter())
-@inject
 async def queue_action_handler(callback: CallbackQuery,
                                callback_data: QueueActionCallbackFactory,
                                user,
-                               queue_service: BotQueueService = Provide[ServicesContainer.bot_queue_service]):
-    await queue_service.queue_action_event(callback, callback_data, user)
+                               services_container: ServicesContainer):
+    await services_container.bot_queue_service.queue_action_event(callback, callback_data, user)

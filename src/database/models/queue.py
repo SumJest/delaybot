@@ -1,4 +1,8 @@
+import json
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, BigInteger, Sequence
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import relationship
 from database.models.basemodel import BaseModel
 from database.fields.list_field import ListField  # Custom field for handling lists (as JSON)
@@ -16,7 +20,7 @@ class Queue(BaseModel):
     msg_id = Column(Integer, nullable=True)  # Integer field
     owner_id = Column(BigInteger, ForeignKey('user.id', ondelete="CASCADE"))  # ForeignKey to User
     closed = Column(Boolean, default=False)  # Boolean field with default False
-    members = Column(ListField, default=[])  # Custom ListField for storing lists as JSON
+    members = Column(MutableList.as_mutable(JSONB), default=[])  # Custom ListField for storing lists as JSON
 
     # Relationships
     chat = relationship('Chat', back_populates="queues")  # Relationship to Chat

@@ -9,13 +9,6 @@ from services.chat_service import ChatService
 
 
 class ChatMiddleware(BaseMiddleware):
-    @inject
-    async def upsert_chat(self, chat: types.Chat,
-                          chat_service: ChatService = Provide[ServicesContainer.chat_service]):
-        chat_model = await chat_service.to_model(chat)
-        print(chat)
-        return await chat_service.upsert(chat_model, chat.id, auto_commit=True)
-
 
     async def __call__(
         self,
@@ -23,7 +16,10 @@ class ChatMiddleware(BaseMiddleware):
         event: Message,
         data: Dict[str, Any]
     ) -> Any:
+        services_container: ServicesContainer = data.get("services_container")
+        chat_service = services_container.chat_service
         if event.chat.type in ('group', 'supergroup'):
-            chat = await self.upsert_chat(event.chat)
+            chat_model = await chat_service.to_model(event.chat)
+            chat = await chat_service.upsert(chat_model, item_id=event.chat.id, auto_commit=True, auto_refresh=True)
             data['chat'] = chat
         return await handler(event, data)

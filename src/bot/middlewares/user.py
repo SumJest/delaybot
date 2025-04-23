@@ -12,21 +12,16 @@ from services.user_service import UserService
 
 
 class UserMiddleware(BaseMiddleware):
-    @inject
-    async def upsert_user(self, user: types.User, user_service: UserService = Provide[ServicesContainer.user_service]) \
-            -> User:
-        user_model = await user_service.to_model(user)
-        user = await user_service.upsert(user_model, item_id=user.id, auto_commit=True, auto_refresh=True)
-        print(user.id)
-        return user
-
     async def __call__(
             self,
             handler: Callable[[types.Message, Dict[str, Any]], Awaitable[Any]],
             event: types.Message,
             data: Dict[str, Any]
     ) -> Any:
-        user = await self.upsert_user(event.from_user)
+        services_container: ServicesContainer = data.get("services_container")
+        user_service = services_container.user_service
+        user_model = await user_service.to_model(event.from_user)
+        user = await user_service.upsert(user_model, item_id=event.from_user.id, auto_commit=True, auto_refresh=True)
         if user.is_blocked:
             return
         data['user'] = user

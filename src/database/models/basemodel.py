@@ -1,12 +1,8 @@
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
-from sqlalchemy.orm import Mapped, mapped_column, Query
-
-from database.connection import connection, async_session_maker
 from advanced_alchemy.base import DefaultBase
+from sqlalchemy import func
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class BaseModel(DefaultBase):
