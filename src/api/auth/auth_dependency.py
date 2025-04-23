@@ -15,7 +15,6 @@ async def auth_initdata_user(
 ):
     if not x_telegram_initdata:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Telegram init data")
-
     data = validate_telegram_init_data(x_telegram_initdata, bot_token=services_container.bot.token)
 
     user_service = services_container.user_service

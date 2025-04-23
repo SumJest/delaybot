@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Telegram WebApp InitData</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        #output {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h2>Telegram WebApp InitData</h2>
+    <div id="output">Загрузка...</div>
+    <div id="output2">Загрузка...</div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        const initData = tg.initData;
+        const initDataUnsafe = tg.initDataUnsafe;
+        document.getElementById('output').textContent = initData
+        fetch("/queue/", {
+          headers: {
+
+              "X-Telegram-InitData": initData
+          }
+
+        }).then(resp => {
+            resp.json().then(data => {
+                document.getElementById('output2').textContent = JSON.stringify(data)
+            })
+        });
+    </script>
+</body>
+</html>

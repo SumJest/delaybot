@@ -1,11 +1,10 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
-from dependency_injector.wiring import Provide, inject
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, \
+    InlineKeyboardButton
 
 from containers import ServicesContainer
 from database.models import User, Chat
-from bot.services import UserService, BotQueueService
 
 router = Router()
 
@@ -40,6 +39,26 @@ async def create_queue_handler(event: Message,
                                services_container: ServicesContainer):
     await services_container.bot_queue_service.create_queue_event(command.args, user, chat)
 
+
+@router.message(
+    Command('webapp')
+)
+async def get_webapp_handler(event: Message,
+                             services_container: ServicesContainer):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="Открыть WebApp",
+                web_app=WebAppInfo(url="https://altpoint.romaaaka.ru/html/webapp")
+            )
+        ]
+    ])
+
+    await services_container.bot.send_message(
+        chat_id=event.chat.id,
+        text="Нажмите кнопку ниже, чтобы открыть WebApp:",
+        reply_markup=keyboard
+    )
 # @bots.simple_bot_handler(router,
 #                          EventTypeFilter(BotEventType.MESSAGE_NEW),
 #                          BotMentionedFilter(settings.VK_GROUP_ID),
