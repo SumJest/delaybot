@@ -1,0 +1,27 @@
+import asyncio
+
+from aiogram import Bot, Dispatcher
+from dependency_injector.wiring import inject, Provide
+
+import settings
+from containers import ServicesContainer
+from bot.handlers import callback_router
+from bot.handlers import message_router
+from bot.middlewares import UserMiddleware, ChatMiddleware
+from containers.bot import BotContainer
+
+@inject
+async def setup(webhook_url,
+                bot: Bot = Provide[BotContainer.bot],
+                dp: Dispatcher = Provide[BotContainer.dispatcher]):
+    dp.message.middleware(UserMiddleware())
+    dp.message.middleware(ChatMiddleware())
+    dp.callback_query.middleware(UserMiddleware())
+    dp.include_routers(message_router, callback_router)
+    await bot.delete_webhook()
+    await bot.set_webhook(
+        url=webhook_url,
+        allowed_updates=dp.resolve_used_update_types(),
+        drop_pending_updates=True
+    )
+

@@ -1,20 +1,20 @@
-from vkwave.bots import SimpleLongPollBot, FiniteStateMachine
+from api.routers import telegram_router, queue_router
+from containers.bot import BotContainer
+from api.application import app
+from bot.application import setup
 
-import settings
-from containers import ServicesContainer
-from handlers.callback import router as callback_router
-from handlers.message import router as message_router
-from middlewares import UserMiddleware, ChatMiddleware
-
-bot = SimpleLongPollBot(tokens=[settings.VK_TOKEN], group_id=settings.VK_GROUP_ID)
-bot.add_middleware(UserMiddleware())
-bot.add_middleware(ChatMiddleware())
-bot.dispatcher.add_router(message_router)
-bot.dispatcher.add_router(callback_router)
+from settings import BASE_URL, settings
 
 
-services_container = ServicesContainer(api_context=bot.api_context, fsm=FiniteStateMachine())
-services_container.wire(['handlers.message',
-                         'handlers.callback'])
+@app.on_event('startup')
+async def startup():
+    bot_container = BotContainer()
+    bot_container.config.telegram.token.from_value(settings.telegram.token)
+    bot_container.wire(modules=[
+        'containers.services',
+        'bot.application'
+    ])
+    app.include_router(telegram_router, prefix='/telegram')
+    app.include_router(queue_router, prefix='/queue')
+    await setup(BASE_URL + app.url_path_for('updates_webhook'))
 
-bot.run_forever()
