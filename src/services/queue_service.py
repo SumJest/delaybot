@@ -1,10 +1,14 @@
+import secrets
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
+from advanced_alchemy.filters import or_, and_
+from sqlalchemy import select
 
 from database.exceptions import ObjectNotFoundError
-from database.models import Queue
-from database.repository.queue import QueueRepository
+from database.models import Queue, QueuePermission, QueueShare
+from database.repository.queue import QueueRepository, QueueShareRepository, QueuePermissionRepository
 
 
 class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
@@ -84,3 +88,36 @@ class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
         queue.members = []
         await self.update(queue, queue_id, auto_commit=True)
         return queue
+
+
+
+
+
+class QueueShareService(SQLAlchemyAsyncRepositoryService[QueueShare, QueueShareRepository]):
+    repository_type = QueueShareRepository
+
+    async def create_share(self, queue_id: int, ttl: int = 3600, can_manage: bool = False) -> QueueShare:
+        token = secrets.token_urlsafe(6)
+        expires = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+
+        return await self.create({
+            "queue_id": queue_id,
+            "token": token,
+            "expires_at": expires,
+            "can_manage": can_manage,
+        })
+
+class QueuePermissionService(SQLAlchemyAsyncRepositoryService[QueuePermission]):
+    repository_type = QueuePermissionRepository
+
+    async def grant_permission(self, queue_id: int, user_id: int, can_manage=False) -> QueuePermission:
+        perm = await self.get_one_or_none(QueuePermission.queue_id == queue_id,
+                                          QueuePermission.user_id == user_id)
+        if perm:
+            perm.can_manage = perm.can_manage or can_manage
+            return await self.update(perm)
+        return await self.create({
+            "queue_id": queue_id,
+            "user_id": user_id,
+            "can_manage": can_manage
+        })

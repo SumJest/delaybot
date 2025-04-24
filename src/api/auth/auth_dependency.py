@@ -1,4 +1,5 @@
 from fastapi import Header, Depends, Security, HTTPException
+from fastapi.security import HTTPBearer
 from fastapi.security.api_key import APIKeyHeader
 from starlette import status
 from api.dependencies import get_services
@@ -8,7 +9,7 @@ from containers import ServicesContainer
 # Для явного отображения в Swagger
 init_data_header = APIKeyHeader(name="X-Telegram-InitData", auto_error=False)
 
-
+# TODO: Превратить в класс
 async def auth_initdata_user(
         x_telegram_initdata: str = Security(init_data_header),
         services_container: ServicesContainer = Depends(get_services),

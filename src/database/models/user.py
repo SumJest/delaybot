@@ -18,6 +18,7 @@ class User(BaseModel):
     # relationships
     chats = relationship('Chat', back_populates='owner')
     queues = relationship('Queue', back_populates='owner')
+    permissions = relationship('QueuePermission', back_populates='user')
 
     def __str__(self):
         if self.first_name or self.last_name:
@@ -25,4 +26,4 @@ class User(BaseModel):
         elif self.username:
             return f'@{self.username}'
         else:
-            return f'[{self.user_id}]'
+            return f'[{self.id}]'

@@ -13,3 +13,22 @@ class QueueSchema(BaseModel):
     members: list[int]
     created_at: datetime
     updated_at: datetime
+
+class UpdateQueueSchema(BaseModel):
+    name: str | None = None
+    closed: bool | None = None
+    members: list[int] | None = None
+
+class QueueShareSchema(BaseModel):
+    id: int
+    queue_id: int
+    token: str
+    can_manage: bool
+    expires_at: datetime
+
+    created_at: datetime
+    updated_at: datetime
+
+class CreateQueueShareSchema(BaseModel):
+    queue_id: int
+    can_manage: bool = False

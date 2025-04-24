@@ -1,9 +1,11 @@
-import json
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, BigInteger, Sequence
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, BigInteger, Sequence, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database.models.basemodel import BaseModel
 from database.fields.list_field import ListField  # Custom field for handling lists (as JSON)
 from database.models.chat import Chat  # Assuming Chat model is in a separate file
@@ -25,3 +27,43 @@ class Queue(BaseModel):
     # Relationships
     chat = relationship('Chat', back_populates="queues")  # Relationship to Chat
     owner = relationship('User', back_populates="queues")  # Relationship to User
+    shares = relationship('QueueShare', back_populates='queue')
+    permissions = relationship('QueuePermission', back_populates='queue')
+
+class QueueShare(BaseModel):
+    __tablename__ = 'queue_share'
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    queue_id = Column(BigInteger, ForeignKey('queue.id', ondelete="CASCADE"))
+    token = Column(String(32), unique=True, index=True)       # 6–8 символов
+    can_manage = Column(Boolean, default=False)                # право управлять очередью
+    expires_at: Mapped[datetime] = mapped_column()
+
+    queue = relationship('Queue', back_populates='shares')
+
+class QueuePermission(BaseModel):
+    __tablename__ = 'queue_permission'
+    queue_id = Column(BigInteger, ForeignKey('queue.id', ondelete="CASCADE"),
+                      primary_key=True)
+    user_id = Column(BigInteger, ForeignKey('user.id', ondelete="CASCADE"),
+                     primary_key=True)
+    can_manage = Column(Boolean, default=False)
+
+    queue = relationship('Queue', back_populates='permissions')
+    user = relationship('User', back_populates='permissions')
+
+
+
+
+
+@event.listens_for(Session, 'do_orm_execute')
+def apply_expired_filter(execute_state):
+    if (
+        execute_state.is_select
+        and not execute_state.is_column_load
+        and not execute_state.is_relationship_load
+    ):
+        if QueueShare.__mapper__ in execute_state.all_mappers:
+            if not execute_state.execution_options.get('include_expired', False):
+                current_time = datetime.now(timezone.utc)
+                condition = QueueShare.expires_at > current_time
+                execute_state.statement = execute_state.statement.where(condition)

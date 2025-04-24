@@ -6,7 +6,7 @@ from dependency_injector.wiring import inject, Provide
 from bot.services import BotQueueService
 from containers.bot import BotContainer
 from services.chat_service import ChatService
-from services.queue_service import QueueService
+from services.queue_service import QueueService, QueuePermissionService, QueueShareService
 from services.user_service import UserService
 
 
@@ -50,16 +50,24 @@ class ServicesContainer:
         self.__initialize_bot()
 
     @cached_property
-    def user_service(self):
+    def user_service(self) -> UserService:
         return UserService(self.session)
 
     @cached_property
-    def chat_service(self):
+    def chat_service(self) -> ChatService:
         return ChatService(self.session)
 
     @cached_property
-    def queue_service(self):
+    def queue_service(self) -> QueueService:
         return QueueService(self.session)
+
+    @cached_property
+    def queue_share_service(self) -> QueueShareService:
+        return QueueShareService(self.session)
+
+    @cached_property
+    def queue_permission_service(self) -> QueuePermissionService:
+        return QueuePermissionService(self.session)
 
     @cached_property
     def bot_queue_service(self):

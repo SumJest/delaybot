@@ -5,7 +5,7 @@ from starlette.templating import Jinja2Templates
 from database.connection import async_config
 from settings import BASE_DIR
 
-app = FastAPI()
+app = FastAPI(swagger_ui_parameters={"persistAuthorization": True})
 
 alchemy = AdvancedAlchemy(
     config=async_config,

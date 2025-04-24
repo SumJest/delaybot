@@ -49,7 +49,7 @@ async def get_webapp_handler(event: Message,
         [
             InlineKeyboardButton(
                 text="Открыть WebApp",
-                web_app=WebAppInfo(url="https://altpoint.romaaaka.ru/html/webapp")
+                web_app=WebAppInfo(url="https://roma.office.alt-point.com/html/webapp")
             )
         ]
     ])
