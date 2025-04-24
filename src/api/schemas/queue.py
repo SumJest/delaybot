@@ -32,3 +32,6 @@ class QueueShareSchema(BaseModel):
 class CreateQueueShareSchema(BaseModel):
     queue_id: int
     can_manage: bool = False
+
+class ActivateQueueShareSchema(BaseModel):
+    token: str

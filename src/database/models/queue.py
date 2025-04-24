@@ -1,4 +1,4 @@
-from sqlalchemy import event
+from sqlalchemy import event, UniqueConstraint, Index
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -42,12 +42,19 @@ class QueueShare(BaseModel):
 
 class QueuePermission(BaseModel):
     __tablename__ = 'queue_permission'
-    queue_id = Column(BigInteger, ForeignKey('queue.id', ondelete="CASCADE"),
-                      primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('user.id', ondelete="CASCADE"),
-                     primary_key=True)
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    queue_id = Column(BigInteger, ForeignKey('queue.id', ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     can_manage = Column(Boolean, default=False)
 
+    __table_args__ = (
+        UniqueConstraint('queue_id', 'user_id', name='uq_queue_user'),
+        Index('ix_queue_permission_user_id', 'user_id'),
+        Index('ix_queue_permission_queue_id', 'queue_id'),
+    )
+
+    # relationships (если ещё не было)
     queue = relationship('Queue', back_populates='permissions')
     user = relationship('User', back_populates='permissions')
 

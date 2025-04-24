@@ -11,7 +11,7 @@ from starlette.responses import Response
 from api.auth.auth_dependency import auth_initdata_user
 from api.dependencies import get_services
 from api.filters.limit_offset import provide_limit_offset_pagination
-from api.schemas.queue import QueueShareSchema, CreateQueueShareSchema
+from api.schemas.queue import QueueShareSchema, CreateQueueShareSchema, ActivateQueueShareSchema
 from containers import ServicesContainer
 from database.models import User, Queue, QueuePermission, QueueShare
 
@@ -79,3 +79,19 @@ async def destroy_share_queue(share_id: int,
 
     await services_container.queue_share_service.delete(share_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/activate/", response_model=QueueShareSchema)
+async def activate_share_queue(queue_share_data: ActivateQueueShareSchema,
+                               user: User = Depends(auth_initdata_user),
+                               services_container: ServicesContainer = Depends(get_services)):
+    queue_share = await services_container.queue_share_service.get_one_or_none(
+        QueueShare.token == queue_share_data.token)
+    if not queue_share:
+        raise HTTPException(status_code=404, detail="Queue share not found")
+
+    await services_container.queue_permission_service.grant_permission(queue_share.queue_id,
+                                                                       user.id,
+                                                                       queue_share.can_manage)
+    await services_container.queue_share_service.delete(queue_share.id)
+    return services_container.queue_share_service.to_schema(queue_share)
+
