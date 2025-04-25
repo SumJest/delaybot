@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from api.schemas.base import BaseModel
+from api.schemas.user import UserSchema
 
 
 class QueueSchema(BaseModel):
@@ -14,10 +15,16 @@ class QueueSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+class DetailQueueSchema(QueueSchema):
+    members: list[UserSchema]
+
+
 class UpdateQueueSchema(BaseModel):
     name: str | None = None
     closed: bool | None = None
     members: list[int] | None = None
+
 
 class QueueShareSchema(BaseModel):
     id: int
@@ -29,9 +36,11 @@ class QueueShareSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class CreateQueueShareSchema(BaseModel):
     queue_id: int
     can_manage: bool = False
+
 
 class ActivateQueueShareSchema(BaseModel):
     token: str

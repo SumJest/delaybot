@@ -15,7 +15,7 @@ MAX_USER_GROUPS = settings.max_user_groups
 LOG_DIR = settings.log_dir
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
 
 # logging.basicConfig(
 #     handlers=[RotatingFileHandler(

@@ -11,7 +11,8 @@ from starlette.responses import Response
 from api.auth.auth_dependency import auth_initdata_user
 from api.dependencies import get_services
 from api.filters.limit_offset import provide_limit_offset_pagination
-from api.schemas.queue import QueueSchema, UpdateQueueSchema, QueueShareSchema, CreateQueueShareSchema
+from api.schemas.queue import QueueSchema, UpdateQueueSchema, QueueShareSchema, CreateQueueShareSchema, \
+    DetailQueueSchema
 from containers import ServicesContainer
 from database.models import User, Queue, QueuePermission, QueueShare
 
@@ -34,18 +35,18 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
 
 @router.get("/{queue_id}/", response_model=QueueSchema)
 async def retrieve_queue(queue_id: int,
-                               user: User = Depends(auth_initdata_user),
-                               services_container: ServicesContainer = Depends(get_services)) -> Queue:
+                         user: User = Depends(auth_initdata_user),
+                         services_container: ServicesContainer = Depends(get_services)) -> Queue:
     statement = select(Queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement)
-
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
     return services_container.queue_service.to_schema(queue)
+
 
 @router.patch("/{queue_id}/", response_model=QueueSchema)
 async def partial_update_queue(queue_id: int,
@@ -53,7 +54,8 @@ async def partial_update_queue(queue_id: int,
                                user: User = Depends(auth_initdata_user),
                                services_container: ServicesContainer = Depends(get_services)) -> Queue:
     statement = select(Queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement)
     if not queue:
@@ -64,13 +66,15 @@ async def partial_update_queue(queue_id: int,
     await services_container.bot_queue_service.update_queue_message(queue)
     return services_container.queue_service.to_schema(queue)
 
+
 @router.delete("/{queue_id}/")
 async def destroy_queue(queue_id: int,
                         user: User = Depends(auth_initdata_user),
                         services_container: ServicesContainer = Depends(get_services)):
     # TODO: Этот блок потом вынести в отдельный модуль прав
     statement = select(Queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement)
     if not queue:
