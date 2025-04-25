@@ -14,5 +14,5 @@ class Chat(BaseModel):
 
     # Relationships
     owner = relationship('User', back_populates="chats")  # Relationship to User
-    queues = relationship('Queue', back_populates="chat")
+    queues = relationship('Queue', back_populates="chat", cascade="all, delete-orphan", passive_deletes=True)
 

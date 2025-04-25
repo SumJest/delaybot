@@ -27,7 +27,8 @@ async def list_share_queue(limit_offset: Annotated[filters.LimitOffset, Depends(
     statement = select(Queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
 
@@ -43,7 +44,8 @@ async def retrieve_share_queue(share_id: int,
     statement = select(QueueShare).join(QueueShare.queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue_share = await services_container.queue_share_service.get_one_or_none(QueueShare.id == share_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue_share:
         raise HTTPException(status_code=404, detail="Queue share not found")
 
@@ -58,7 +60,8 @@ async def create_share_queue(queue_share_data: CreateQueueShareSchema,
     statement = select(Queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
 
@@ -73,7 +76,8 @@ async def destroy_share_queue(share_id: int,
     statement = select(QueueShare).join(QueueShare.queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue_share = await services_container.queue_share_service.get_one_or_none(QueueShare.id == share_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue_share:
         raise HTTPException(status_code=404, detail="Queue share not found")
 

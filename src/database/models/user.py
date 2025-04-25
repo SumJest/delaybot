@@ -16,9 +16,10 @@ class User(BaseModel):
     username = Column(String, nullable=True)
 
     # relationships
-    chats = relationship('Chat', back_populates='owner')
-    queues = relationship('Queue', back_populates='owner')
-    permissions = relationship('QueuePermission', back_populates='user')
+    chats = relationship('Chat', back_populates='owner', cascade="all, delete-orphan", passive_deletes=True)
+    queues = relationship('Queue', back_populates='owner', cascade="all, delete-orphan", passive_deletes=True)
+    permissions = relationship('QueuePermission', back_populates='user', cascade="all, delete-orphan",
+                               passive_deletes=True)
 
     def __str__(self):
         if self.first_name or self.last_name:

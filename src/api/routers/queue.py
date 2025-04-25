@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 from advanced_alchemy.extensions.fastapi import filters
@@ -29,23 +30,31 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
     results, total = await queue_service.list_and_count(user_filter, limit_offset,
-                                                        statement=statement)
+                                                        statement=statement,
+                                                                   uniquify=True)
     return queue_service.to_schema(results, total, filters=[limit_offset])
 
 
-@router.get("/{queue_id}/", response_model=QueueSchema)
+@router.get("/{queue_id}/", response_model=DetailQueueSchema)
 async def retrieve_queue(queue_id: int,
                          user: User = Depends(auth_initdata_user),
-                         services_container: ServicesContainer = Depends(get_services)) -> Queue:
+                         services_container: ServicesContainer = Depends(get_services)):
     statement = select(Queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
-    return services_container.queue_service.to_schema(queue)
+
+    users = await services_container.user_service.list(User.id.in_(queue.members))
+    users_dict = {user.id: user for user in users}
+    queue_data = services_container.queue_service.to_schema(queue).to_dict()
+    queue_data['members'] = [users_dict[user_id] for user_id in queue_data['members'] if user_id in users_dict]
+
+    return queue_data
 
 
 @router.patch("/{queue_id}/", response_model=QueueSchema)
@@ -57,7 +66,8 @@ async def partial_update_queue(queue_id: int,
     user_filter = or_(Queue.owner_id == user.id,
                       and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
 
@@ -76,10 +86,11 @@ async def destroy_queue(queue_id: int,
     user_filter = or_(Queue.owner_id == user.id,
                       and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement)
+                                                                   statement=statement,
+                                                                   uniquify=True)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
     # Конец блока
-    await services_container.bot_queue_service.mark_deleted(queue)
     await services_container.queue_service.delete(queue_id)
+    await services_container.bot_queue_service.mark_deleted(queue)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

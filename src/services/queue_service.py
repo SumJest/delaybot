@@ -89,6 +89,14 @@ class QueueService(SQLAlchemyAsyncRepositoryService[Queue, QueueRepository]):
         await self.update(queue, queue_id, auto_commit=True)
         return queue
 
+    async def can_manage(self, queue_id: int, user_id: int) -> bool:
+        statement = select(Queue).join(Queue.permissions, isouter=True)
+        user_filter = or_(Queue.owner_id == user_id,
+                          and_(QueuePermission.can_manage == True, QueuePermission.user_id == user_id))
+        queue = await self.get_one_or_none(Queue.id == queue_id, user_filter,
+                                                                       statement=statement,
+                                                                       uniquify=True)
+        return queue is not None
 
 
 

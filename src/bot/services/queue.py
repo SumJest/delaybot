@@ -81,13 +81,16 @@ class BotQueueService:
     async def mark_deleted(self, queue: Queue):
         chat = await self.chat_service.get(queue.chat_id)
         owner = await self.user_service.get(queue.owner_id)
-        await self.bot.edit_message_text(chat_id=chat.id,
-                                         message_id=queue.msg_id,
-                                         text=f"📌 <b>Очередь:</b> <i>{queue.name}</i>\n" \
-                                              f"⚠️ <b>Удалена</b>\n" \
-                                              f"👤 <b>Создатель:</b> {owner}",
-                                         reply_markup=None,
-                                         parse_mode='html')
+        try:
+            await self.bot.edit_message_text(chat_id=chat.id,
+                                             message_id=queue.msg_id,
+                                             text=f"📌 <b>Очередь:</b> <i>{queue.name}</i>\n" \
+                                                  f"⚠️ <b>Удалена</b>\n" \
+                                                  f"👤 <b>Создатель:</b> {owner}",
+                                             reply_markup=None,
+                                             parse_mode='html')
+        except TelegramBadRequest as ex:
+            pass
 
     async def queue_list(self, event: Message, user: User, chat: Chat):
         queues = await self.queue_service.list(Queue.chat_id == (chat.id))
@@ -119,6 +122,7 @@ class BotQueueService:
                                  callback_data: QueueActionCallbackFactory,
                                  user: User):
         queue: Queue = await self.queue_service.get(callback_data.queue_id)
+        can_manage = await self.queue_service.can_manage(queue.id, user.id)
         if queue is None:
             await callback.answer(text="Ошибка: очередь не найдена в базе ;-(!", show_alert=True)
             return
@@ -142,7 +146,7 @@ class BotQueueService:
                 )
                 await self.update_queue_message(queue)
             case QueueAction.CLEAR:
-                if queue.owner_id == user.id or user.is_admin:
+                if can_manage or user.is_admin:
                     if not len(queue.members):
                         await callback.answer(text="Очередь пуста", show_alert=True)
                         return
@@ -151,15 +155,15 @@ class BotQueueService:
                     )
                     await self.update_queue_message(queue)
                 else:
-                    await callback.answer(text="Только создатель может отчистить очередь!", show_alert=True)
+                    await callback.answer(text="Только создатель может очистить очередь!", show_alert=True)
             case QueueAction.DELETE:
-                if queue.owner_id == user.id or user.is_admin:
+                if can_manage or user.is_admin:
                     await self.queue_service.delete(queue.id, auto_commit=True)
                     await self.mark_deleted(queue)
                 else:
                     await callback.answer(text="Только создатель может удалить очередь!", show_alert=True)
             case QueueAction.CLOSE | QueueAction.OPEN:
-                if queue.owner_id == user.id or user.is_admin:
+                if can_manage or user.is_admin:
                     queue.closed = True if callback_data.action == QueueAction.CLOSE else False
                     queue = await self.queue_service.update(queue)
                     await self.update_queue_message(queue)

@@ -27,8 +27,14 @@ class Queue(BaseModel):
     # Relationships
     chat = relationship('Chat', back_populates="queues")  # Relationship to Chat
     owner = relationship('User', back_populates="queues")  # Relationship to User
-    shares = relationship('QueueShare', back_populates='queue')
-    permissions = relationship('QueuePermission', back_populates='queue')
+    shares = relationship('QueueShare',
+                          back_populates='queue',
+                          cascade="all, delete-orphan",
+                          passive_deletes=True)
+    permissions = relationship('QueuePermission',
+                               back_populates='queue',
+                               cascade="all, delete-orphan",
+                               passive_deletes=True)
 
 class QueueShare(BaseModel):
     __tablename__ = 'queue_share'
