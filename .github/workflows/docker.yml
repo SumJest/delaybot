@@ -1,39 +1,13 @@
-name: Docker CI/CD
+name: Docker Image CI/CD
+
 on:
   push:
     branches: [ "master" ]
-  release:
-    types: [ published, edited ]
-  workflow_dispatch:
-    inputs:
-      version:
-        default: latest
-        description: Tag you want to release.
-        required: true
-  pull_request:
-    branches:
-      - master
 
 jobs:
-  test:
-    name: Run test suite
+  build_and_push:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Env variable assignment
-        run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-      - name: Run tests
-        run: |
-          docker build -t delaybot-test -f Dockerfile .
-          docker run --env VK_TOKEN="" --env VK_GROUP_ID=0 --entrypoint "python" delaybot-test -m unittest tests
-  push_to_registry:
-    needs: test
     name: "Build and push"
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion != 'failure' && github.event_name != 'pull_request'}}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -46,25 +20,25 @@ jobs:
       - name: Use GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1.1.1
-      - name: Env variable assignment
+      - name: Assign registry image name
         run: echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-      - name: Assign version
+      - name: Assign image tag
         run: |
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
           if [ "${{ steps.gitversion.outputs.semVer }}" != "" ]; then
             echo "DOCKER_TAG=v${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_ENV
           fi;
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: docker login
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag ${{ env.CI_REGISTRY_IMAGE }}:${{ env.DOCKER_TAG }}
       - name: Docker Push
         run: docker push ${{ env.CI_REGISTRY_IMAGE }}:${{ env.DOCKER_TAG }}
-  deploy_via_ssh:
-    needs: push_to_registry
+  deploy:
+    needs: build_and_push
     name: "Deploy"
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion != 'failure' || github.event_name == 'workflow_dispatch' }}
@@ -80,7 +54,7 @@ jobs:
       - name: Use GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v1.1.1
-      - name: repository name fix and env
+      - name: Assign image name and tag
         run: |
           echo "CI_REGISTRY_IMAGE=$(echo ${{ secrets.DOCKER_USER }}/${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV  
           echo "DOCKER_TAG=latest" >> $GITHUB_ENV
@@ -90,7 +64,6 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "DOCKER_TAG=${{ inputs.version }}" >> $GITHUB_ENV
           fi;
-
       - name: Create .env file
         run: |
           echo "Generating .env file"
@@ -99,8 +72,6 @@ jobs:
           echo "CI_REGISTRY_IMAGE=${{ env.CI_REGISTRY_IMAGE }}" >> .env
           echo "DOCKER_TAG=${{ env.DOCKER_TAG }}" >> .env
           echo "SSH_DIR=${{ secrets.SSH_DIR }}" >> .env
-          echo "${{ secrets.DELAYBOT_ENV }}" >> .env
-
       - name: copy files to target server via scp
         uses: appleboy/scp-action@v0.1.3
         with:
@@ -110,20 +81,21 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "./docker-compose.ci.yaml,./.env"
           target: "${{ secrets.SSH_DIR }}"
-
       - name: remote docker-compose up via ssh
         uses: appleboy/ssh-action@v0.1.5
         env:
           DOCKER_USER: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_COMPOSE_OVERRIDE: ${{ vars.DOCKER_COMPOSE_OVERRIDE }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_KEY }}
-          envs: DOCKER_USER,DOCKER_PASSWORD
+          envs: DOCKER_USER,DOCKER_PASSWORD,DOCKER_COMPOSE_OVERRIDE
           script: |
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
             cd ${{ secrets.SSH_DIR }}
-            docker compose -f ./docker-compose.ci.yaml pull
-            docker compose -f ./docker-compose.ci.yaml up -d
+            echo "$DOCKER_COMPOSE_OVERRIDE"  > docker-compose.override.yaml
+            docker compose -f ./docker-compose.ci.yaml -f ./docker-compose.override.yaml config > docker-compose.yaml
+            docker compose up -d --remove-orphans --pull always

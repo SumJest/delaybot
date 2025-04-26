@@ -8,8 +8,6 @@ BASE_DIR = Path(__file__).resolve().parent
 settings = Settings()
 
 BASE_URL = settings.base_url.rstrip('/')
-VK_TOKEN = settings.vk.token
-VK_GROUP_ID = settings.vk.group_id
 TELEGRAM_TOKEN = settings.telegram.token
 MAX_USER_GROUPS = settings.max_user_groups
 LOG_DIR = settings.log_dir

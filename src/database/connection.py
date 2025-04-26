@@ -9,19 +9,21 @@ from dependency_injector.resources import T
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from dependency_injector import resources
 
+from settings import settings
+
 logger = logging.getLogger(__name__)
 
-database_url = 'postgresql+asyncpg://delaybot:delaybot@localhost:5432/delaybot'
+database_url = settings.database.url
 
 async_config = SQLAlchemyAsyncConfig(
-    connection_string=database_url,
+    connection_string=settings.database.url,
     session_config=AsyncSessionConfig(expire_on_commit=False),
     create_all=True,
     commit_mode="autocommit",
     engine_config=EngineConfig(json_serializer=json.dumps)
 )
 
-engine = create_async_engine(url=database_url)
+engine = create_async_engine(url=settings.database.url)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession)
 
 # @event.listens_for(Engine, "connect")

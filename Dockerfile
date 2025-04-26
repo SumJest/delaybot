@@ -1,4 +1,4 @@
-FROM python:3.10-alpine as builder
+FROM python:3.11-alpine as builder
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 WORKDIR /usr/src/app
@@ -10,15 +10,12 @@ RUN apk update \
 COPY ./src/requirements.txt ./
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
-FROM python:3.10-alpine
+FROM python:3.11-alpine
 
 RUN apk update \
     && apk add shadow
 
-RUN mkdir -p /app
-
-ENV HOME=/app
-ENV APP_HOME=/app/delaybot
+ENV APP_HOME=/app
 
 RUN mkdir $APP_HOME
 RUN mkdir $APP_HOME/logs
@@ -32,6 +29,6 @@ RUN pip install --no-cache /wheels/*
 
 ADD ./src $APP_HOME
 
-RUN chmod +x /app/delaybot/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-ENTRYPOINT ["/app/delaybot/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
