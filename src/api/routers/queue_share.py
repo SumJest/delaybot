@@ -4,7 +4,7 @@ from advanced_alchemy.extensions.fastapi import filters
 from advanced_alchemy.filters import or_, and_
 from advanced_alchemy.service import OffsetPagination
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, func
 from starlette import status
 from starlette.responses import Response
 
@@ -25,7 +25,9 @@ async def list_share_queue(limit_offset: Annotated[filters.LimitOffset, Depends(
                            services_container: ServicesContainer = Depends(get_services)) -> OffsetPagination[
     QueueShareSchema]:
     statement = select(Queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      Queue.members.contains(func.to_jsonb(user.id)),
+                      QueuePermission.user_id == user.id)
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement,
                                                                    uniquify=True)
@@ -37,20 +39,23 @@ async def list_share_queue(limit_offset: Annotated[filters.LimitOffset, Depends(
     results, total = await queue_share_service.list_and_count(QueueShare.queue_id == queue_id, limit_offset)
     return queue_share_service.to_schema(results, total, filters=[limit_offset])
 
+
 @router.get("/{share_id}/", response_model=QueueShareSchema)
 async def retrieve_share_queue(share_id: int,
-                           user: User = Depends(auth_initdata_user),
-                           services_container: ServicesContainer = Depends(get_services)) -> QueueShare:
+                               user: User = Depends(auth_initdata_user),
+                               services_container: ServicesContainer = Depends(get_services)) -> QueueShare:
     statement = select(QueueShare).join(QueueShare.queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue_share = await services_container.queue_share_service.get_one_or_none(QueueShare.id == share_id, user_filter,
-                                                                   statement=statement,
-                                                                   uniquify=True)
+                                                                               statement=statement,
+                                                                               uniquify=True)
     if not queue_share:
         raise HTTPException(status_code=404, detail="Queue share not found")
 
     queue_share_service = services_container.queue_share_service
     return queue_share_service.to_schema(queue_share)
+
 
 @router.post("/", response_model=QueueShareSchema)
 async def create_share_queue(queue_share_data: CreateQueueShareSchema,
@@ -58,7 +63,8 @@ async def create_share_queue(queue_share_data: CreateQueueShareSchema,
                              services_container: ServicesContainer = Depends(get_services)):
     queue_id = queue_share_data.queue_id
     statement = select(Queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement,
                                                                    uniquify=True)
@@ -71,18 +77,20 @@ async def create_share_queue(queue_share_data: CreateQueueShareSchema,
 
 @router.delete("/{share_id}/")
 async def destroy_share_queue(share_id: int,
-                             user: User = Depends(auth_initdata_user),
-                             services_container: ServicesContainer = Depends(get_services)):
+                              user: User = Depends(auth_initdata_user),
+                              services_container: ServicesContainer = Depends(get_services)):
     statement = select(QueueShare).join(QueueShare.queue).join(Queue.permissions, isouter=True)
-    user_filter = or_(Queue.owner_id == user.id, and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+    user_filter = or_(Queue.owner_id == user.id,
+                      and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue_share = await services_container.queue_share_service.get_one_or_none(QueueShare.id == share_id, user_filter,
-                                                                   statement=statement,
-                                                                   uniquify=True)
+                                                                               statement=statement,
+                                                                               uniquify=True)
     if not queue_share:
         raise HTTPException(status_code=404, detail="Queue share not found")
 
     await services_container.queue_share_service.delete(share_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 @router.post("/activate/", response_model=QueueShareSchema)
 async def activate_share_queue(queue_share_data: ActivateQueueShareSchema,
@@ -98,4 +106,3 @@ async def activate_share_queue(queue_share_data: ActivateQueueShareSchema,
                                                                        queue_share.can_manage)
     await services_container.queue_share_service.delete(queue_share.id)
     return services_container.queue_share_service.to_schema(queue_share)
-
