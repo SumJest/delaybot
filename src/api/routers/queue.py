@@ -1,10 +1,9 @@
-import asyncio
 from typing import Annotated
 
 from advanced_alchemy.extensions.fastapi import filters
-from advanced_alchemy.service import OffsetPagination
-from fastapi import APIRouter, Depends, HTTPException
 from advanced_alchemy.filters import or_, and_
+from advanced_alchemy.service import OffsetPagination
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from starlette import status
 from starlette.responses import Response
@@ -12,16 +11,16 @@ from starlette.responses import Response
 from api.auth.auth_dependency import auth_initdata_user
 from api.dependencies import get_services
 from api.filters.limit_offset import provide_limit_offset_pagination
-from api.schemas.queue import QueueSchema, UpdateQueueSchema, QueueShareSchema, CreateQueueShareSchema, \
-    DetailQueueSchema
+from api.schemas.queue import QueueSchema, UpdateQueueSchema, DetailQueueSchema
 from containers import ServicesContainer
-from database.models import User, Queue, QueuePermission, QueueShare
+from database.models import User, Queue, QueuePermission
 
 router = APIRouter(tags=["queue"])
 
 
 @router.get("/", response_model=OffsetPagination[QueueSchema])
 async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provide_limit_offset_pagination)],
+                     manage: bool | None = Query(None),
                      user: User = Depends(auth_initdata_user),
                      services_container: ServicesContainer = Depends(get_services)) -> OffsetPagination[QueueSchema]:
     queue_service = services_container.queue_service
@@ -29,6 +28,9 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
+    if manage:
+        user_filter = and_(user_filter, or_(QueuePermission.can_manage == True,
+                                            Queue.owner_id == user.id))
     results, total = await queue_service.list_and_count(user_filter, limit_offset,
                                                         statement=statement,
                                                                    uniquify=True)
