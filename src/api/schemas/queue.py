@@ -18,6 +18,7 @@ class QueueSchema(BaseModel):
 
 class DetailQueueSchema(QueueSchema):
     members: list[UserSchema]
+    can_manage: bool
 
 
 class UpdateQueueSchema(BaseModel):

@@ -24,6 +24,7 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
                      user: User = Depends(auth_initdata_user),
                      services_container: ServicesContainer = Depends(get_services)) -> OffsetPagination[QueueSchema]:
     queue_service = services_container.queue_service
+
     statement = select(Queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
@@ -55,6 +56,7 @@ async def retrieve_queue(queue_id: int,
     users_dict = {user.id: user for user in users}
     queue_data = services_container.queue_service.to_schema(queue).to_dict()
     queue_data['members'] = [users_dict[user_id] for user_id in queue_data['members'] if user_id in users_dict]
+    queue_data['can_manage'] = await services_container.queue_service.can_manage(queue.id, user.id)
 
     return queue_data
 

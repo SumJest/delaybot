@@ -9,6 +9,7 @@ from aiogram.types import Message, CallbackQuery
 from bot.keyboards.main import create_queue_keyboard
 from bot.keyboards.types import QueueAction
 from bot.keyboards.types.queue_action import QueueActionCallbackFactory
+from bot.utils.helpers import encode_payload
 from database.models import Queue, User, Chat
 from resources import messages
 from services.chat_service import ChatService
@@ -50,6 +51,9 @@ class BotQueueService:
             output += f"<i>Нет участников</i>"
 
         return output
+
+    async def generate_queue_link(self, queue: Queue):
+        return encode_payload('queue', str(queue.id))
 
     async def update_queue_message(self, queue: Queue) -> bool:
         result = None

@@ -1,7 +1,8 @@
-from aiogram.types import KeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, ReplyKeyboardBuilder
+from aiogram.types import KeyboardButton, WebAppInfo, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from bot.keyboards.types.queue_action import QueueActionCallbackFactory, QueueAction
+from bot.utils.helpers import encode_payload
 from database.models import Queue
 
 
@@ -96,22 +97,22 @@ def create_queue_keyboard(queue: Queue):
             ),
         )
 
-    builder.row(
-        InlineKeyboardButton(
-            text="Очистить",
-            callback_data=QueueActionCallbackFactory(
-                action=QueueAction.CLEAR,
-                queue_id=queue.id,
-            ).pack()
-        ),
-        InlineKeyboardButton(
-            text="Удалить",
-            callback_data=QueueActionCallbackFactory(
-                action=QueueAction.DELETE,
-                queue_id=queue.id,
-            ).pack()
-        ),
-    )
+    # builder.row(
+    #     InlineKeyboardButton(
+    #         text="Очистить",
+    #         callback_data=QueueActionCallbackFactory(
+    #             action=QueueAction.CLEAR,
+    #             queue_id=queue.id,
+    #         ).pack()
+    #     ),
+    #     InlineKeyboardButton(
+    #         text="Удалить",
+    #         callback_data=QueueActionCallbackFactory(
+    #             action=QueueAction.DELETE,
+    #             queue_id=queue.id,
+    #         ).pack()
+    #     ),
+    # )
     if queue.closed:
         builder.row(
             InlineKeyboardButton(
@@ -132,6 +133,13 @@ def create_queue_keyboard(queue: Queue):
                 ).pack()
             )
         )
+
+    builder.row(
+        InlineKeyboardButton(
+            text="Просмотр",
+            url=f"https://t.me/queueeebot?startapp={encode_payload('queue', str(queue.id))}"
+        )
+    )
     return builder.as_markup()
 
 

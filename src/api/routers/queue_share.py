@@ -31,12 +31,14 @@ async def list_share_queue(limit_offset: Annotated[filters.LimitOffset, Depends(
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
                                                                    statement=statement,
                                                                    uniquify=True)
+    queue_share_service = services_container.queue_share_service
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
+    queue_share_filter = QueueShare.queue_id == queue_id
+    if not await services_container.queue_service.can_manage(queue.id, user.id):
+        queue_share_filter = and_(queue_share_filter, QueueShare.can_manage == False)
 
-    queue_share_service = services_container.queue_share_service
-
-    results, total = await queue_share_service.list_and_count(QueueShare.queue_id == queue_id, limit_offset)
+    results, total = await queue_share_service.list_and_count(queue_share_filter, limit_offset)
     return queue_share_service.to_schema(results, total, filters=[limit_offset])
 
 
@@ -47,10 +49,12 @@ async def retrieve_share_queue(share_id: int,
     statement = select(QueueShare).join(QueueShare.queue).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
+
     queue_share = await services_container.queue_share_service.get_one_or_none(QueueShare.id == share_id, user_filter,
                                                                                statement=statement,
                                                                                uniquify=True)
-    if not queue_share:
+    if not queue_share or (not await services_container.queue_service.can_manage(queue_share.queue_id, user.id) and
+                           queue_share.can_manage):
         raise HTTPException(status_code=404, detail="Queue share not found")
 
     queue_share_service = services_container.queue_share_service
