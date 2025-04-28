@@ -20,7 +20,7 @@ async_config = SQLAlchemyAsyncConfig(
     session_config=AsyncSessionConfig(expire_on_commit=False),
     create_all=True,
     commit_mode="autocommit",
-    engine_config=EngineConfig(json_serializer=json.dumps)
+    engine_config=EngineConfig(json_serializer=json.dumps, pool_size=10, max_overflow=0),
 )
 
 engine = create_async_engine(url=settings.database.url)

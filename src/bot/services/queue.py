@@ -125,15 +125,15 @@ class BotQueueService:
                                  callback: CallbackQuery,
                                  callback_data: QueueActionCallbackFactory,
                                  user: User):
-        queue: Queue = await self.queue_service.get(callback_data.queue_id)
-        can_manage = await self.queue_service.can_manage(queue.id, user.id)
+        queue: Queue = await self.queue_service.get_one_or_none(Queue.id == callback_data.queue_id)
         if queue is None:
-            await callback.answer(text="Ошибка: очередь не найдена в базе ;-(!", show_alert=True)
+            await callback.answer(text="Ошибка: очередь не найдена в базе ;-(!")
             return
+        can_manage = await self.queue_service.can_manage(queue.id, user.id)
         match callback_data.action:
             case QueueAction.JOIN:
                 if user.id in queue.members:
-                    await callback.answer(text="Ты уже состоишь в очереди", show_alert=True)
+                    await callback.answer(text="Ты уже состоишь в очереди")
                     return
                 queue = await self.queue_service.add_member(
                     queue_id=queue.id,
@@ -142,7 +142,7 @@ class BotQueueService:
                 await self.update_queue_message(queue)
             case QueueAction.LEAVE:
                 if user.id not in queue.members:
-                    await callback.answer(text="Тебя нет в очереди", show_alert=True)
+                    await callback.answer(text="Тебя нет в очереди")
                     return
                 queue = await self.queue_service.remove_member(
                     queue_id=queue.id,
@@ -152,25 +152,25 @@ class BotQueueService:
             case QueueAction.CLEAR:
                 if can_manage or user.is_admin:
                     if not len(queue.members):
-                        await callback.answer(text="Очередь пуста", show_alert=True)
+                        await callback.answer(text="Очередь пуста")
                         return
                     queue = await self.queue_service.clear_queue(
                         queue_id=queue.id,
                     )
                     await self.update_queue_message(queue)
                 else:
-                    await callback.answer(text="Только создатель может очистить очередь!", show_alert=True)
+                    await callback.answer(text="Только создатель может очистить очередь!")
             case QueueAction.DELETE:
                 if can_manage or user.is_admin:
                     await self.queue_service.delete(queue.id, auto_commit=True)
                     await self.mark_deleted(queue)
                 else:
-                    await callback.answer(text="Только создатель может удалить очередь!", show_alert=True)
+                    await callback.answer(text="Только создатель может удалить очередь!")
             case QueueAction.CLOSE | QueueAction.OPEN:
                 if can_manage or user.is_admin:
                     queue.closed = True if callback_data.action == QueueAction.CLOSE else False
                     queue = await self.queue_service.update(queue)
                     await self.update_queue_message(queue)
                 else:
-                    await callback.answer(text="Только создатель может закрыть/открыть очередь!", show_alert=True)
+                    await callback.answer(text="Только создатель может закрыть/открыть очередь!")
         await callback.answer()

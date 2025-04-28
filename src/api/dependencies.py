@@ -13,4 +13,4 @@ async def get_services(
         session: DatabaseSession,
 ) -> ServicesContainer:
     # FastAPI вызовет alchemy.provide_session ровно один раз за запрос
-    return ServicesContainer(session)
+    yield ServicesContainer(session)
