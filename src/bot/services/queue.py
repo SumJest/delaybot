@@ -3,10 +3,10 @@ import logging
 import traceback
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from aiogram.types import Message, CallbackQuery
 
-from bot.keyboards.main import create_queue_keyboard
+from bot.keyboards.main import create_queue_keyboard, build_queue_open_keyboard
 from bot.keyboards.types import QueueAction
 from bot.keyboards.types.queue_action import QueueActionCallbackFactory
 from bot.utils.helpers import encode_payload
@@ -174,3 +174,45 @@ class BotQueueService:
                 else:
                     await callback.answer(text="Только создатель может закрыть/открыть очередь!")
         await callback.answer()
+
+    async def notify_shared_user(self, user_id: int, queue_id: int) -> bool:
+        """
+        Отправляет пользователю уведомление о том, что ему поделились очередью.
+
+        Возвращает True, если сообщение отправлено, False — иначе.
+        Если пользователь до этого не начинал чат с ботом или заблокировал его,
+        логируем и возвращаем False.
+
+        :param user_id: Telegram user_id, которому поделились очередью
+        :param queue_id: ID очереди
+        :returns: bool - результат
+        """
+        # Получаем саму очередь
+        queue = await self.queue_service.get(queue_id)
+        # Проверяем, может ли пользователь управлять очередью
+        can_manage = await self.queue_service.can_manage(queue_id, user_id)
+
+        # Формируем права в читаемом виде
+        rights = "Управление очередью" if can_manage else "Просмотр очереди"
+
+        # Текст сообщения
+        text = (
+            f"📢 Вам предоставлен доступ к очереди «{queue.name}»\n\n"
+            f"🔑 Ваши права: {rights}"
+        )
+
+        # Строим клавиатуру с кнопкой открытия мини-приложения
+        keyboard = await build_queue_open_keyboard(queue_id)
+
+        # Отправляем сообщение
+        try:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=text,
+                reply_markup=keyboard
+            )
+        except TelegramAPIError as e:
+            logging.warning(f"Ошибка Telegram API при отправке уведомления {user_id}: {e}")
+            return False
+
+        return True

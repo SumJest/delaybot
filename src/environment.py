@@ -32,9 +32,11 @@ class DatabaseSettings(BaseSettings, env_prefix='database_'):
             f"@{self.host}:{self.port}/{self.name}"
         )
 
+
 class Settings(BaseSettings):
     base_url: str = Field(..., env="BASE_URL")
     max_user_groups: int = Field(default=5, env="MAX_USER_GROUPS")
     log_dir: Path = Field(default=Path("logs"), env="LOG_DIR")
+    webapp_url: str = Field(..., env="WEBAPP_URL")
     telegram: TelegramSettings = TelegramSettings()
     database: DatabaseSettings = DatabaseSettings()

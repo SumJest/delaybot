@@ -1,9 +1,10 @@
-from aiogram.types import KeyboardButton, WebAppInfo, InlineKeyboardButton
+from aiogram.types import KeyboardButton, WebAppInfo, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from bot.keyboards.types.queue_action import QueueActionCallbackFactory, QueueAction
 from bot.utils.helpers import encode_payload
 from database.models import Queue
+from settings import settings
 
 
 def get_main_keyboard():
@@ -142,6 +143,20 @@ def create_queue_keyboard(queue: Queue):
     )
     return builder.as_markup()
 
+
+async def build_queue_open_keyboard(queue_id: int) -> InlineKeyboardMarkup:
+    """
+    Строит клавиатуру с кнопкой открытия mini app очереди.
+    """
+    url = f"{settings.webapp_url}queue/{queue_id}"
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="Открыть очередь",
+            web_app=WebAppInfo(url=url)
+        )
+    )
+    return builder.as_markup()
 
 # def create_queue_keyboard(queue: Queue):
 #     queue_keyboard = Keyboard(inline=True)
