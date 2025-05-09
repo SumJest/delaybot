@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.application import alchemy
@@ -13,4 +14,13 @@ async def get_services(
         session: DatabaseSession,
 ) -> ServicesContainer:
     # FastAPI вызовет alchemy.provide_session ровно один раз за запрос
-    yield ServicesContainer(session)
+    # Устанавливаем таймаут захвата блокировок в 5 секунд
+    await session.execute(text("SET lock_timeout = '10s'"))
+    try:
+        yield ServicesContainer(session)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
