@@ -108,6 +108,7 @@ async def activate_share_queue(queue_share_data: ActivateQueueShareSchema,
     await services_container.queue_permission_service.grant_permission(queue_share.queue_id,
                                                                        user.id,
                                                                        queue_share.can_manage)
+    await services_container.queue_share_service.delete(queue_share.id)
     sent = await services_container.bot_queue_service.notify_shared_user(user.id, queue_share.queue_id)
     data = services_container.queue_share_service.to_schema(queue_share, schema_type=QueueShareSchema)
     if not sent:
