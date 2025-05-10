@@ -14,6 +14,8 @@ async def startup():
         'containers.services',
         'bot.application'
     ])
+    bot_info = await bot_container.bot().get_me()
+    bot_container.config.telegram.username.from_value(bot_info.username)
     app.include_router(telegram_router, prefix='/telegram')
     app.include_router(queue_router, prefix='/queue')
     app.include_router(html_router, prefix='/html')

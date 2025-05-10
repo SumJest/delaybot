@@ -2,14 +2,14 @@ import asyncio
 import logging
 import traceback
 
-from aiogram import Bot
+from aiogram import Bot, types
 from aiogram.exceptions import TelegramBadRequest, TelegramAPIError
 from aiogram.types import Message, CallbackQuery
 
 from bot.keyboards.main import create_queue_keyboard, build_queue_open_keyboard
 from bot.keyboards.types import QueueAction
 from bot.keyboards.types.queue_action import QueueActionCallbackFactory
-from bot.utils.helpers import encode_payload
+from bot.utils.helpers import encode_payload, decode_payload
 from database.models import Queue, User, Chat
 from resources import messages
 from services.chat_service import ChatService
@@ -19,11 +19,13 @@ from services.user_service import UserService
 
 class BotQueueService:
 
-    def __init__(self, bot: Bot, queue_service: QueueService, user_service: UserService, chat_service: ChatService):
+    def __init__(self, bot: Bot, queue_service: QueueService, user_service: UserService, chat_service: ChatService,
+                 bot_username: str):
         self.bot = bot
         self.queue_service = queue_service
         self.user_service = user_service
         self.chat_service = chat_service
+        self.bot_username = bot_username
 
     def num_to_smiles(self, number: int):
         numbers = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
@@ -52,8 +54,8 @@ class BotQueueService:
 
         return output
 
-    async def generate_queue_link(self, queue: Queue):
-        return encode_payload('queue', str(queue.id))
+    def generate_queue_payload(self, queue_id: int):
+        return encode_payload('queue', str(queue_id))
 
     async def update_queue_message(self, queue: Queue) -> bool:
         result = None
@@ -174,6 +176,25 @@ class BotQueueService:
                 else:
                     await callback.answer(text="Только создатель может закрыть/открыть очередь!")
         await callback.answer()
+
+    def generate_start_link(self, payload: str | None = None) -> str:
+        return f'https://t.me/{self.bot_username}{f"?start={payload}" if payload else ""}'
+
+    async def handle_start_action(self, user_id: int, payload: str):
+        try:
+            action, token = decode_payload(payload)
+        except Exception as ex:
+            return False
+
+        match action:
+            case "queue":
+                if not token.isdigit():
+                    logging.warning('Token should be integer with action "queue"')
+                    return False
+                return await self.notify_shared_user(user_id, int(token))
+            case _:
+                logging.warning(f'Unknown action "{action}"')
+                return False
 
     async def notify_shared_user(self, user_id: int, queue_id: int) -> bool:
         """

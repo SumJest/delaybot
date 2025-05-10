@@ -1,6 +1,6 @@
 from functools import cached_property
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from dependency_injector.wiring import inject, Provide
 
 from bot.services import BotQueueService
@@ -41,9 +41,11 @@ class ServicesContainer:
     @inject
     def __initialize_bot(self,
                          bot: Bot = Provide[BotContainer.bot],
-                         dp: Dispatcher = Provide[BotContainer.dispatcher]):
+                         dp: Dispatcher = Provide[BotContainer.dispatcher],
+                         bot_username: str = Provide[BotContainer.config.telegram.username]):
         self.bot = bot
         self.dp = dp
+        self.bot_username = bot_username
 
     def __init__(self, session):
         self.session = session
@@ -74,4 +76,5 @@ class ServicesContainer:
         return BotQueueService(bot=self.bot,
                                queue_service=self.queue_service,
                                user_service=self.user_service,
-                               chat_service=self.chat_service)
+                               chat_service=self.chat_service,
+                               bot_username=self.bot_username)

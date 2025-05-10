@@ -34,6 +34,8 @@ class QueueShareSchema(BaseModel):
     can_manage: bool
     expires_at: datetime
 
+    start_link: str | None = None
+
     created_at: datetime
     updated_at: datetime
 

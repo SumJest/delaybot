@@ -3,6 +3,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, \
     InlineKeyboardButton
 
+from bot.utils.helpers import decode_payload
 from containers import ServicesContainer
 from database.models import User, Chat
 
@@ -13,9 +14,25 @@ router = Router()
     Command('start')
 )
 async def start_message_handler(event: Message,
+                                command: CommandObject,
                                 user: User,
                                 services_container: ServicesContainer):
-    return "Hi"
+    await event.answer(
+        """
+Привет! Я бот для создания виртуальных очередей. Добавь меня в чат и используй команды:
+/queue Название очереди - создать очередь
+/queues - Список из очередей в текущем чате
+
+Для управления очередями используй мини-приложение бота
+"""
+    )
+    if not command.args:
+        return
+
+    result = await services_container.bot_queue_service.handle_start_action(user.id, command.args)
+    if not result:
+        await event.answer("К сожалению не удалось выполнить действие по ссылке")
+
 
 
 @router.message(
