@@ -25,7 +25,7 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
                      services_container: ServicesContainer = Depends(get_services)) -> OffsetPagination[QueueSchema]:
     queue_service = services_container.queue_service
 
-    statement = select(Queue).join(Queue.permissions, isouter=True)
+    statement = select(Queue).distinct(Queue.id).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
@@ -33,8 +33,7 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
         user_filter = and_(user_filter, or_(QueuePermission.can_manage == True,
                                             Queue.owner_id == user.id))
     results, total = await queue_service.list_and_count(user_filter, limit_offset,
-                                                        statement=statement,
-                                                                   uniquify=True)
+                                                        statement=statement)
     return queue_service.to_schema(results, total, filters=[limit_offset])
 
 
@@ -42,13 +41,12 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
 async def retrieve_queue(queue_id: int,
                          user: User = Depends(auth_initdata_user),
                          services_container: ServicesContainer = Depends(get_services)):
-    statement = select(Queue).join(Queue.permissions, isouter=True)
+    statement = select(Queue).distinct(Queue.id).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       Queue.members.contains(func.to_jsonb(user.id)),
                       QueuePermission.user_id == user.id)
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement,
-                                                                   uniquify=True)
+                                                                   statement=statement)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
 
@@ -66,12 +64,11 @@ async def partial_update_queue(queue_id: int,
                                queue_data: UpdateQueueSchema,
                                user: User = Depends(auth_initdata_user),
                                services_container: ServicesContainer = Depends(get_services)) -> Queue:
-    statement = select(Queue).join(Queue.permissions, isouter=True)
+    statement = select(Queue).distinct(Queue.id).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement,
-                                                                   uniquify=True)
+                                                                   statement=statement)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
 
@@ -86,12 +83,11 @@ async def destroy_queue(queue_id: int,
                         user: User = Depends(auth_initdata_user),
                         services_container: ServicesContainer = Depends(get_services)):
     # TODO: Этот блок потом вынести в отдельный модуль прав
-    statement = select(Queue).join(Queue.permissions, isouter=True)
+    statement = select(Queue).distinct(Queue.id).join(Queue.permissions, isouter=True)
     user_filter = or_(Queue.owner_id == user.id,
                       and_(QueuePermission.can_manage == True, QueuePermission.user_id == user.id))
     queue = await services_container.queue_service.get_one_or_none(Queue.id == queue_id, user_filter,
-                                                                   statement=statement,
-                                                                   uniquify=True)
+                                                                   statement=statement)
     if not queue:
         raise HTTPException(status_code=404, detail="Queue not found")
     # Конец блока
