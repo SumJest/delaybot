@@ -32,8 +32,15 @@ async def list_queue(limit_offset: Annotated[filters.LimitOffset, Depends(provid
     if manage:
         user_filter = and_(user_filter, or_(QueuePermission.can_manage == True,
                                             Queue.owner_id == user.id))
-    results, total = await queue_service.list_and_count(user_filter, limit_offset,
-                                                        statement=statement)
+    results = await queue_service.list(user_filter, limit_offset,
+                                       statement=statement)
+    count_stmt = (
+        select(func.count(func.distinct(Queue.id)))
+        .select_from(Queue)
+        .outerjoin(Queue.permissions)
+        .where(user_filter)
+    )
+    total = (await services_container.queue_share_service.repository.session.execute(count_stmt)).scalar_one()
     return queue_service.to_schema(results, total, filters=[limit_offset])
 
 
