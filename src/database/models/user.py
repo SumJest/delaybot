@@ -14,6 +14,7 @@ class User(BaseModel):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
+    photo_url = Column(String, nullable=True)
 
     # relationships
     chats = relationship('Chat', back_populates='owner', cascade="all, delete-orphan", passive_deletes=True)
