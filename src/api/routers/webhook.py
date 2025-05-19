@@ -9,7 +9,7 @@ from containers import ServicesContainer
 router = APIRouter(tags=["telegram"])
 
 
-@router.post("/webhook")
+@router.post("/webhook", include_in_schema=False)
 async def updates_webhook(request: Request, services_container: ServicesContainer = Depends(get_services)):
     logging.info("Received webhook request")
     dp = services_container.dp

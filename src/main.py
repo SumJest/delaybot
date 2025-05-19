@@ -1,4 +1,4 @@
-from api.routers import telegram_router, queue_router, html_router, queue_share_router, user_router
+from api.routers import telegram_router, queue_router, queue_share_router, user_router
 from containers.bot import BotContainer
 from api.application import app
 from bot.application import setup
@@ -18,7 +18,6 @@ async def startup():
     bot_container.config.telegram.username.from_value(bot_info.username)
     app.include_router(telegram_router, prefix='/telegram')
     app.include_router(queue_router, prefix='/queue')
-    app.include_router(html_router, prefix='/html')
     app.include_router(queue_share_router, prefix='/queue-share')
     app.include_router(user_router, prefix='/user')
     await setup(BASE_URL + app.url_path_for('updates_webhook'))
